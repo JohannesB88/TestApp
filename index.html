@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    
     <title>Piano Learning Game</title>
     <!-- Add Tone.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
@@ -1636,17 +1634,12 @@
         }
 
         async function startNewGame() {
-            
-            // Enable audio context and handle mute switch
+            // Enable audio context on iOS
             if (Tone.context.state !== 'running') {
                 await Tone.start();
-                console.log('Audio context started');
-            }
-            
-            // Force resume if suspended (iOS mute switch)
-            if (Tone.context.state === 'suspended') {
-                await Tone.context.resume();
-                console.log('Audio context resumed from mute');
+                // Trigger a silent note to preload samples
+                piano.triggerAttackRelease("C4", "1n", "+0", 0);
+                console.log('Audio context started for iOS');
             }
         
             // Your existing game state reset
@@ -1735,10 +1728,6 @@
             });
         }
 
-        // Piano sound setup
-        // Piano sound setup - modified for mobile
-        let piano = null; // Start with null
-        
         // Piano sound setup
         const piano = new Tone.Sampler({
             urls: {
