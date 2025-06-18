@@ -1634,6 +1634,14 @@
         }
 
         function startNewGame() {
+
+            // Add this to your startNewGame() function:
+            async function startNewGame() {
+                // Enable audio context on iOS
+                if (Tone.context.state !== 'running') {
+                    await Tone.start();
+                    console.log('Audio context started for iOS');
+                }
             // Add this at the beginning of startNewGame()
             if (Tone.context.state !== 'running') {
                 Tone.start().then(() => {
