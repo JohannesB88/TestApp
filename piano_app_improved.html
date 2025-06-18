@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piano Learning Game</title>
+    <!-- Add Tone.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #f4f1e8;
+            user-select: none;
+        }
+
+        .game-container {
+            max-width: 400px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        /* Score and Settings */
+        .header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .score-display {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+
+
+        .lives {
+            color: red;
+        }
+
+        /* Scale Selection */
+        .scale-selector {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        select {
+            padding: 2px;
+            font-size: 14px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            width: 100px; /* Fixed width for all dropdowns */
+            box-sizing: border-box;
+        }
+
+        select:disabled {
+            background-color: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .end-game-btn {
+            position: absolute;
+            left: 0;
+            padding: 4px 8px;
+            font-size: 12px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .end-game-btn:hover {
+            background: #cc3333;
+        }
+
+
+        /* Staff Notation Area */
+        .staff-area {
+            background: white;
+            border: 2px solid #333;
+            height: 280px;
+            margin-bottom: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Staff Lines System - 25 evenly spaced lines */
+        .staff-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .staff-line {
+            height: 1.5px;
+            background: #ddd;
+            width: 100%;
+        }
+
+        /* Above treble (lines 1-5) - light gray */
+        .staff-line:nth-child(1),
+        .staff-line:nth-child(2),
+        .staff-line:nth-child(3),
+        .staff-line:nth-child(4),
+        .staff-line:nth-child(5) {
+            background: #ddd;
+            opacity: 0.4;
+        }
+
+        /* Treble staff (lines 6-10) - black */
+        .staff-line:nth-child(6),
+        .staff-line:nth-child(7),
+        .staff-line:nth-child(8),
+        .staff-line:nth-child(9),
+        .staff-line:nth-child(10) {
+            background: #333;
+            opacity: 1;
+        }
+
+        /* Middle (lines 11-15) - light gray */
+        .staff-line:nth-child(11),
+        .staff-line:nth-child(12),
+        .staff-line:nth-child(13),
+        .staff-line:nth-child(14),
+        .staff-line:nth-child(15) {
+            background: #ddd;
+            opacity: 0.4;
+        }
+
+        /* Bass staff (lines 16-20) - black */
+        .staff-line:nth-child(16),
+        .staff-line:nth-child(17),
+        .staff-line:nth-child(18),
+        .staff-line:nth-child(19),
+        .staff-line:nth-child(20) {
+            background: #333;
+            opacity: 1;
+        }
+
+        /* Below bass (lines 21-25) - light gray */
+        .staff-line:nth-child(21),
+        .staff-line:nth-child(22),
+        .staff-line:nth-child(23),
+        .staff-line:nth-child(24),
+        .staff-line:nth-child(25) {
+            background: #ddd;
+            opacity: 0.4;
+        }
+
+        /* Clef Symbols */
+        .clef-symbol {
+            position: absolute;
+            left: 20px;
+            font-size: 58px;
+            font-weight: normal;
+            color: #333;
+            line-height: 1;
+        }
+
+        .treble-clef {
+            top: calc(14 * (100% / 49));
+            transform: translateY(-40%);
+        }
+
+        .bass-clef {
+            top: calc(33 * (100% / 48));
+            transform: translateY(-53%);
+        }
+
+        /* Moving Note Head - Proper Music Note */
+        .moving-note {
+            position: absolute;
+            right: 20px;
+            width: 18px;
+            height: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: none;
+        }
+
+        /* Oval note head with slight tilt */
+        .note-head {
+            width: 16px;
+            height: 12px;
+            background: black;
+            border-radius: 50%;
+            transform: rotate(-20deg);
+            position: relative;
+            z-index: 12; /* Higher than stem z-index: 9 */
+        }
+
+        .note-head.correct {
+            background: green;
+        }
+
+        .note-head.incorrect {
+            background: red;
+        }
+
+        /* Note stem - positioned relative to note head */
+        .note-stem {
+            position: absolute;
+            width: 2px;
+            background: black;
+            z-index: 9;
+        }
+
+        .note-stem.stem-up {
+            height: 28px;
+            right: 1px;
+            top: -21px;
+        }
+
+        .note-stem.stem-down {
+            height: 28px;
+            left: 1px;
+            top: 8px;
+        }
+
+        .note-stem.stem-up.middle-region {
+            height: 56px;
+            top: -49px;
+        }
+
+        .note-stem.stem-down.middle-region {
+            height: 56px;
+            top: 8px;
+        }
+
+        .moving-note.animate {
+            animation: moveNote linear;
+            animation-fill-mode: forwards;
+        }
+
+        @keyframes moveNote {
+            from { right: 0px; }
+            to { right: calc(100% + 30px); }
+        }
+
+        /* Accidentals */
+        #noteAccidental {
+            position: absolute;
+            right: 25px;
+            font-size: 18px;
+            color: black;
+            z-index: 11;
+            font-weight: bold;
+            transform: translateY(-50%);
+        }
+
+        /* Key signature accidentals */
+        .key-signature-accidental {
+            position: absolute;
+            color: #333;
+            z-index: 5;
+            font-weight: bold;
+        }
+
+        .key.pressed {
+            transform: scale(0.95);
+            transition: transform 0.1s;
+        }
+
+
+        /* Piano Keyboard */
+        .piano-container {
+            margin-bottom: 15px;
+        }
+
+        .piano-keys {
+            display: flex;
+            justify-content: center;
+            background: #333;
+            padding: 4px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .key {
+            margin: 0 1px;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s;
+        }
+
+        .white-key {
+            width: 42px;
+            height: 140px;
+            background: white;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 8px;
+            font-size: 11px;
+            color: transparent; /* Hidden by default */
+        }
+
+        .black-key {
+            width: 26px;
+            height: 90px;
+            background: #333;
+            color: transparent; /* Hidden by default */
+            margin: 0 -13px;
+            z-index: 2;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 6px;
+            font-size: 9px;
+        }
+
+        .key:hover {
+            transform: scale(0.98);
+        }
+
+        .key:active {
+            transform: scale(0.95);
+        }
+
+        .key-labels-toggle {
+            position: absolute;
+            left: 8px;
+            top: 70%; /* Moved down to avoid collision with support notes button */
+            transform: translateY(-50%);
+            width: 22px;
+            height: 22px;
+            background: #555;
+            color: white;
+            border: 1px solid #777;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            user-select: none;
+            z-index: 10;
+            opacity: 0.5;
+        }
+
+        .key-labels-toggle:hover {
+            background: #666;
+        }
+
+        /* Composers Collection Area */
+        .composers-area {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 4px 8px;
+            margin-bottom: 10px;
+            min-height: 25px;
+            order: 2; /* Positioned after staff area */
+        }
+
+        .composers-title {
+            font-size: 10px;
+            font-weight: bold;
+            margin-bottom: 3px;
+            color: #666;
+        }
+
+        .composer-portraits {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            justify-content: center;
+            align-items: center;
+            min-height: 20px;
+        }
+
+        .composer-portrait {
+            width: 18px;
+            height: 18px;
+            background: #ddd;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 6px;
+            text-align: center;
+            border: 1px solid #999;
+            opacity: 0.3;
+        }
+
+        .composer-portrait.collected {
+            opacity: 1;
+            background: #4CAF50;
+            color: white;
+            animation: collectComposer 1s ease-in-out;
+        }
+
+        @keyframes collectComposer {
+            0% { transform: scale(0) translateY(-50px); opacity: 0; }
+            50% { transform: scale(1.2) translateY(-20px); opacity: 1; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        /* Falling composer ghost */
+        .falling-composer {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: rgba(76, 175, 80, 0.8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            z-index: 20;
+            animation: fallDown 2s ease-in-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes fallDown {
+            0% { 
+                top: -60px; 
+                opacity: 0.8;
+                transform: scale(1.2);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            100% { 
+                top: calc(100% - 100px); 
+                opacity: 0;
+                transform: scale(0.8);
+            }
+        }
+        
+
+        .support-notes-toggle {
+            position: absolute;
+            left: 8px; /* Changed from right to left */
+            top: 20%;
+            transform: translateY(-50%);
+            width: 22px;
+            height: 22px;
+            background: #555;
+            color: white;
+            border: 1px solid #777;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            user-select: none;
+            z-index: 10;
+            opacity: 0.5;
+        }
+
+        .support-notes-container {
+            position: absolute;
+            left: 5px;
+            top: 0;
+            bottom: 0;
+            width: 15px;
+            z-index: 3;
+            display: none;
+        }
+
+        .support-notes-container.active {
+            display: block;
+        }
+
+        .support-note-indicator {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: rgba(100, 150, 255, 0.6);
+            border-radius: 50%;
+            transform: translateY(-50%);
+            border: 1px solid rgba(100, 150, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .support-note-indicator.bass-note {
+            left: -6px; /* Left column for bass */
+        }
+
+        .support-note-indicator.treble-note {
+            left: 8px; /* Right column for treble */
+        }
+
+
+        /* Start Game Overlay */
+        .game-start-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            flex-direction: column;
+            z-index: 15;
+        }
+
+        .start-game-btn {
+            margin-top: 15px;
+            padding: 12px 24px;
+            font-size: 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .start-game-btn:hover {
+            background: #45a049;
+        }
+
+        /* Game Over */
+        .game-over {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            flex-direction: column;
+        }
+
+        .play-again-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* Visual Feedback */
+        .screen-flicker {
+            animation: flicker 0.5s ease-in-out;
+        }
+
+        @keyframes flicker {
+            0%, 100% { filter: brightness(1); }
+            25% { filter: brightness(0.7); }
+            50% { filter: brightness(1.2); }
+            75% { filter: brightness(0.9); }
+        }
+
+        .difficulty-display {
+            position: absolute;
+            right: 0;
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Mode selector */
+        .mode-selector {
+            margin-bottom: 10px;
+        }
+
+        /* Game container layout adjustment */
+        .game-container {
+            max-width: 400px;
+            margin: 0 auto;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            order: 1;
+        }
+
+        /* Still mode styles */
+        .still-note {
+            position: absolute;
+            width: 18px;
+            height: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .still-notes-container {
+            position: absolute;
+            top: 0;
+            left: 80px;
+            right: 20px;
+            height: 100%;
+            display: none;
+        }
+
+        .still-notes-container.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Header with Score and Settings -->
+        <div class="header">
+            <div class="score-display">
+                Score: <span id="score">0</span> | 
+                <span class="lives">Misses: <span id="lives">0</span>/3</span>
+            </div>
+            <button id="endGameBtn" class="end-game-btn" onclick="endGame()" style="display: none;">End Game</button>
+            <div class="difficulty-display" id="difficulty">Beginner</div>
+        </div>
+
+        <div class="main-content">
+            <!-- Scale Selection -->
+            <div class="scale-selector">
+                <select id="scale">
+                    <option value="C">C Major</option>
+                    <option value="G">G Major</option>
+                    <option value="D">D Major</option>
+                    <option value="A">A Major</option>
+                    <option value="E">E Major</option>
+                    <option value="F">F Major</option>
+                    <option value="Bb">Bb Major</option>
+                    <option value="Am">A Minor</option>
+                    <option value="Em">E Minor</option>
+                    <option value="Bm">B Minor</option>
+                    <option value="Dm">D Minor</option>
+                    <option value="Gm">G Minor</option>
+                    <option value="Cm">C Minor</option>
+                </select>
+                
+                <select id="difficultySelect">
+                    <option value="beginner">Beginner</option>
+                    <option value="experienced">Experienced</option>
+                    <option value="advanced">Advanced</option>
+                    <option value="pro">Pro</option>
+                </select>
+
+                <select id="gameMode">
+                    <option value="moving">Move</option>
+                    <option value="still">Still</option>
+                </select>
+            </div>
+
+            <!-- Staff Notation Area -->
+            <div class="staff-area">
+
+                <div class="support-notes-container" id="supportNotesContainer">
+                <!-- Support note indicators will be generated here -->
+                </div>
+
+            <!-- Start Game Overlay -->
+            <div class="game-start-overlay" id="gameStartOverlay">
+                <div>Piano Learning Game</div>
+                <div style="font-size: 14px; margin: 10px 0; max-width: 300px; line-height: 1.4;">
+                    Configure your settings above and click Start to begin!
+                </div>
+                <button class="start-game-btn" onclick="startNewGame()">Start Game</button>
+            </div>
+
+            <!-- Staff Lines System -->
+            <div class="staff-lines">
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+                <div class="staff-line"></div>
+            </div>
+
+            <!-- Clef Symbols -->
+            <div class="clef-symbol treble-clef">𝄞</div>
+            <div class="clef-symbol bass-clef">𝄢</div>
+            
+            <!-- Still Notes Container -->
+            <div class="still-notes-container" id="stillNotesContainer">
+                <!-- Still notes will be generated here -->
+            </div>
+        </div>
+
+        <!-- Composers Collection Area -->
+        <div class="composers-area">
+            <div class="composers-title">Composers Collection (<span id="composersCount">0</span>/10)</div>
+            <div class="composer-portraits" id="composerPortraits">
+                <!-- Composer portraits will be generated here -->
+            </div>
+        </div>
+
+        <!-- Piano Keyboard -->
+        <div class="piano-container">
+            <div class="piano-keys" id="pianoKeys">
+                <!-- Keys will be generated by JavaScript -->
+            </div>
+        </div>
+
+
+        <!-- Game Over Screen -->
+        <div class="game-over" id="gameOver">
+            <div>Game Over!</div>
+            <div>Final Score: <span id="finalScore">0</span></div>
+            <button class="play-again-btn" onclick="showStartScreen()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let gameState = {
+            score: 0,
+            consecutiveMisses: 0,
+            currentNote: null,
+            currentNoteOctave: 4,
+            selectedScale: 'C',
+            difficulty: 'beginner',
+            gameMode: 'moving',
+            isPlaying: false,
+            composersCollected: [],
+            waitingForAnswer: false,
+            noteStartTime: 0,
+            activeNotes: [],
+            stillNotes: [],
+            currentStillNoteIndex: 0
+        };
+
+        // Complete note position mapping
+        const NOTE_POSITIONS = {
+            // Top ledger lines (above treble staff) - positions 1-9
+            'A6': 2,    'G6': 3,    'F6': 4,    'E6': 5,    'D6': 6,    'C6': 7,    'B5': 8,    'A5': 9,    'G5': 10,
+            
+            // Treble staff (G clef) - positions 10-18
+            'F5': 11,   'E5': 12,   'D5': 13,   'C5': 14,   'B4': 15,   'A4': 16,   'G4': 17,   'F4': 18,   'E4': 19,
+            
+            // Middle section - positions 19-27
+            'D4_treble': 20, 'E4_bass': 20,     'C4_treble': 21, 'D4_bass': 21,     'B3_treble': 22, 'C4_bass': 22,
+            'A3_treble': 23, 'B3_bass': 23,     'G3_treble': 24, 'A3_bass': 24,     'F3_treble': 25, 'G3_bass': 25,
+            'E3_treble': 26, 'F3_bass': 26,     'D3_treble': 27, 'E3_bass': 27,     'C3_treble': 28, 'D3_bass': 28,
+            'B2_treble': 29, 'C3_bass': 29,     'A2_treble': 30, 'B2_bass': 30,
+
+            // Bass staff (F clef) - positions 30-38
+            'A2': 31,   'G2': 32,   'F2': 33,   'E2': 34,   'D2': 35,   'C2': 36,   'B1': 37,   'A1': 38,   'G1': 39,
+
+            // Below bass staff - positions 39-47
+            'F1': 40,   'E1': 41,   'D1': 42,   'C1': 43,   'B0': 44,   'A0': 45,   'G0': 46,   'F0': 47,   'E0': 48
+        };
+
+        // Get vertical position for note on staff
+        function getNotePosition(note, octave, hand = '') {
+            let noteKey = note + octave + hand;
+            if (NOTE_POSITIONS[noteKey]) {
+                const positionNumber = NOTE_POSITIONS[noteKey];
+                return `calc(${positionNumber - 1} * (100% / 48))`;
+            }
+            
+            noteKey = note + octave;
+            if (NOTE_POSITIONS[noteKey]) {
+                const positionNumber = NOTE_POSITIONS[noteKey];
+                return `calc(${positionNumber - 1} * (100% / 48))`;
+            }
+            
+            return 'calc(14 * (100% / 48))'; // Default position
+        }
+
+        // Scale definitions
+        const SCALES = {
+            'C': ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
+            'G': ['G', 'A', 'B', 'C', 'D', 'E', 'F#'],
+            'D': ['D', 'E', 'F#', 'G', 'A', 'B', 'C#'],
+            'A': ['A', 'B', 'C#', 'D', 'E', 'F#', 'G#'],
+            'E': ['E', 'F#', 'G#', 'A', 'B', 'C#', 'D#'],
+            'F': ['F', 'G', 'A', 'Bb', 'C', 'D', 'E'],
+            'Bb': ['Bb', 'C', 'D', 'Eb', 'F', 'G', 'A'],
+            'Am': ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
+            'Em': ['E', 'F#', 'G', 'A', 'B', 'C', 'D'],
+            'Bm': ['B', 'C#', 'D', 'E', 'F#', 'G', 'A'],
+            'Dm': ['D', 'E', 'F', 'G', 'A', 'Bb', 'C'],
+            'Gm': ['G', 'A', 'Bb', 'C', 'D', 'Eb', 'F'],
+            'Cm': ['C', 'D', 'Eb', 'F', 'G', 'Ab', 'Bb']
+        };
+
+        // Scale definitions and accidental positions
+        const SCALE_DEFINITIONS = {
+            'C': [], 'G': ['F#'], 'D': ['F#', 'C#'], 'A': ['F#', 'C#', 'G#'], 'E': ['F#', 'C#', 'G#', 'D#'],
+            'F': ['Bb'], 'Bb': ['Bb', 'Eb'], 'Am': [], 'Em': ['F#'], 'Bm': ['F#', 'C#'],
+            'Dm': ['Bb'], 'Gm': ['Bb', 'Eb'], 'Cm': ['Bb', 'Eb', 'Ab']
+        };
+
+        const ACCIDENTAL_POSITIONS = {
+            // Sharp positions (in order: F# C# G# D# A# E# B#)
+            'F#': [
+                { clef: 'treble', position: 18 }, // F space in treble (F4 position)
+                { clef: 'bass', position: 33 }    // F line in bass (F2 position)
+            ],
+            'C#': [
+                { clef: 'treble', position: 14 }, // C space in treble (C5 position)
+                { clef: 'bass', position: 36 }    // C space in bass (C2 position)
+            ],
+            'G#': [
+                { clef: 'treble', position: 17 }, // G line in treble (G4 position)
+                { clef: 'bass', position: 32 }    // G space in bass (G2 position)
+            ],
+            'D#': [
+                { clef: 'treble', position: 13 }, // D line in treble (D5 position)
+                { clef: 'bass', position: 35 }    // D line in bass (D2 position)
+            ],
+            'A#': [
+                { clef: 'treble', position: 16 }, // A space in treble (A4 position)
+                { clef: 'bass', position: 31 }    // A line in bass (A2 position)
+            ],
+            'E#': [
+                { clef: 'treble', position: 12 }, // E space in treble (E5 position)
+                { clef: 'bass', position: 34 }    // E space in bass (E2 position)
+            ],
+            'B#': [
+                { clef: 'treble', position: 15 }, // B line in treble (B4 position)
+                { clef: 'bass', position: 37 }    // B line in bass (B1 position)
+            ],
+            
+            // Flat positions (in order: Bb Eb Ab Db Gb Cb Fb)
+            'Bb': [
+                { clef: 'treble', position: 15 }, // B line in treble (B4 position)
+                { clef: 'bass', position: 37 }    // B line in bass (B1 position)
+            ],
+            'Eb': [
+                { clef: 'treble', position: 12 }, // E space in treble (E5 position)
+                { clef: 'bass', position: 34 }    // E space in bass (E2 position)
+            ],
+            'Ab': [
+                { clef: 'treble', position: 16 }, // A space in treble (A4 position)
+                { clef: 'bass', position: 31 }    // A line in bass (A2 position)
+            ],
+            'Db': [
+                { clef: 'treble', position: 13 }, // D line in treble (D5 position)
+                { clef: 'bass', position: 35 }    // D line in bass (D2 position)
+            ],
+            'Gb': [
+                { clef: 'treble', position: 17 }, // G line in treble (G4 position)
+                { clef: 'bass', position: 32 }    // G space in bass (G2 position)
+            ],
+            'Cb': [
+                { clef: 'treble', position: 14 }, // C space in treble (C5 position)
+                { clef: 'bass', position: 36 }    // C space in bass (C2 position)
+            ],
+            'Fb': [
+                { clef: 'treble', position: 18 }, // F space in treble (F4 position)
+                { clef: 'bass', position: 33 }    // F line in bass (F2 position)
+            ]
+        };
+
+        // Composers list
+        const COMPOSERS = [
+            'Bach', 'Mozart', 'Beethoven', 'Chopin', 'Liszt', 
+            'Debussy', 'Rachmaninoff', 'Brahms', 'Schubert', 'Tchaikovsky'
+        ];
+
+        // Difficulty settings
+        const DIFFICULTY_SETTINGS = {
+            beginner: { noteSpeed: 8000, noteCount: 1 },
+            experienced: { noteSpeed: 8000, noteCount: 2 },
+            advanced: { noteSpeed: 8000, noteCount: 3 },
+            pro: { noteSpeed: 8000, noteCount: 4 }
+        };
+
+        // Initialize the game
+        function initGame() {
+            createPianoKeys();
+            createComposerPortraits();
+            updateDisplay();
+            setupEventListeners();
+            showStartScreen();
+            console.log('Piano Learning Game initialized!');
+        }
+
+        function createComposerPortraits() {
+            const container = document.getElementById('composerPortraits');
+            container.innerHTML = '';
+            
+            COMPOSERS.forEach((composer, index) => {
+                const portrait = document.createElement('div');
+                portrait.className = 'composer-portrait';
+                portrait.id = `composer-${index}`;
+                portrait.textContent = composer.slice(0, 3); // First 3 letters
+                portrait.title = composer;
+                container.appendChild(portrait);
+            });
+        }
+
+        // Add support notes function:
+        // Add support notes function:
+        function createSupportNotes() {
+            const container = document.getElementById('supportNotesContainer');
+            container.innerHTML = '';
+            
+            // Bass support notes (F and C) - left column
+            const bassNotes = [
+                {note: 'F', octave: 0}, {note: 'C', octave: 1},
+                {note: 'F', octave: 1}, {note: 'C', octave: 2}, 
+                {note: 'F', octave: 2}, {note: 'C', octave: 3},
+                {note: 'F', octave: 3}, {note: 'C', octave: 4}
+            ];
+            
+            bassNotes.forEach(noteData => {
+                const indicator = document.createElement('div');
+                indicator.className = 'support-note-indicator bass-note';
+                indicator.style.top = getNotePosition(noteData.note, noteData.octave, '_bass');
+                indicator.textContent = noteData.note;
+                indicator.title = noteData.note + noteData.octave;
+                container.appendChild(indicator);
+            });
+            
+            // Treble support notes (G and C) - right column
+            const trebleNotes = [
+                {note: 'G', octave: 6}, {note: 'C', octave: 6}, 
+                {note: 'G', octave: 5}, {note: 'C', octave: 5}, 
+                {note: 'G', octave: 4}, {note: 'C', octave: 4},
+                {note: 'G', octave: 3}, {note: 'C', octave: 3}
+            ];
+            
+            trebleNotes.forEach(noteData => {
+                const indicator = document.createElement('div');
+                indicator.className = 'support-note-indicator treble-note';
+                indicator.style.top = getNotePosition(noteData.note, noteData.octave, '_treble');
+                indicator.textContent = noteData.note;
+                indicator.title = noteData.note + noteData.octave;
+                container.appendChild(indicator);
+            });
+        }
+
+        function createPianoKeys() {
+            const pianoKeys = document.getElementById('pianoKeys');
+            pianoKeys.innerHTML = '';
+
+            // Add toggle button
+            const toggleButton = document.createElement('div');
+            toggleButton.className = 'key-labels-toggle';
+            toggleButton.innerHTML = '👁';
+            toggleButton.title = 'Toggle key labels';
+            
+            let labelsVisible = false; // Default to hidden
+            toggleButton.addEventListener('click', () => {
+                labelsVisible = !labelsVisible;
+                const allKeys = pianoKeys.querySelectorAll('.key');
+                allKeys.forEach(key => {
+                    if (labelsVisible) {
+                        key.style.color = key.classList.contains('white-key') ? 'black' : 'white';
+                    } else {
+                        key.style.color = 'transparent';
+                    }
+                });
+                toggleButton.style.opacity = labelsVisible ? '1' : '0.5';
+            });
+            
+            pianoKeys.appendChild(toggleButton);
+
+
+            // Add this to createPianoKeys() function after the existing toggle button:
+            const supportNotesToggle = document.createElement('div');
+            supportNotesToggle.className = 'support-notes-toggle';
+            supportNotesToggle.innerHTML = '♪';
+            supportNotesToggle.title = 'Toggle support notes';
+
+            let supportNotesVisible = false;
+            supportNotesToggle.addEventListener('click', () => {
+                supportNotesVisible = !supportNotesVisible;
+                const container = document.getElementById('supportNotesContainer');
+                if (supportNotesVisible) {
+                    container.classList.add('active');
+                    createSupportNotes();
+                } else {
+                    container.classList.remove('active');
+                }
+                supportNotesToggle.style.opacity = supportNotesVisible ? '1' : '0.5';
+            });
+
+            pianoKeys.appendChild(supportNotesToggle);
+
+
+
+
+            // Create white keys
+            const WHITE_KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+            WHITE_KEYS.forEach(note => {
+                const key = document.createElement('div');
+                key.className = 'key white-key';
+                key.textContent = note;
+                key.dataset.note = note;
+                                
+                key.addEventListener('click', () => {
+                    playPianoKey(note);
+                    playPianoSound(note, gameState.currentNoteOctave);
+                });
+
+                // In createPianoKeys(), replace the touch event listeners:
+                key.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    key.classList.add('pressed');
+                    playPianoKey(note);
+                    playPianoSound(note, gameState.currentNoteOctave);
+                });
+
+                key.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    key.classList.remove('pressed');
+                });
+                
+                pianoKeys.appendChild(key);
+
+                // Add black keys
+                if (['C', 'D', 'F', 'G', 'A'].includes(note)) {
+                    const blackNote = note + '#';
+                    const blackKey = document.createElement('div');
+                    blackKey.className = 'key black-key';
+                    
+                    const enharmonics = getEnharmonicEquivalents(blackNote);
+                    if (enharmonics.length > 1) {
+                        blackKey.innerHTML = enharmonics.join('<br>');
+                    } else {
+                        blackKey.textContent = blackNote;
+                    }
+                    
+                    blackKey.dataset.note = blackNote;
+                    
+                    blackKey.addEventListener('click', () => {
+                        playPianoKey(blackNote);
+                        playPianoSound(blackNote, gameState.currentNoteOctave);
+                    });
+                                    // Do the same for black keys:
+                    blackKey.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        blackKey.classList.add('pressed');
+                        playPianoKey(blackNote);
+                        playPianoSound(blackNote, gameState.currentNoteOctave);
+                    });
+
+                    blackKey.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        blackKey.classList.remove('pressed');
+                    });
+                    
+                    pianoKeys.appendChild(blackKey);
+                } 
+            });
+        }
+
+        function setupEventListeners() {
+            document.getElementById('scale').addEventListener('change', function() {
+                gameState.selectedScale = this.value;
+                displayKeySignature(this.value);
+            });
+
+            document.getElementById('difficultySelect').addEventListener('change', function() {
+                gameState.difficulty = this.value;
+                document.getElementById('difficulty').textContent = 
+                    this.value.charAt(0).toUpperCase() + this.value.slice(1);
+            });
+
+            document.getElementById('gameMode').addEventListener('change', function() {
+                if (gameState.isPlaying) {
+                    // Revert to previous value if game is running
+                    this.value = gameState.gameMode;
+                    return; // Don't allow the change
+                }
+                
+                gameState.gameMode = this.value;
+                const difficultySelect = document.getElementById('difficultySelect');
+                
+                if (this.value === 'still') {
+                    difficultySelect.disabled = true;
+                } else {
+                    difficultySelect.disabled = false;
+                }
+            });
+
+            // Initialize key signature display
+            displayKeySignature(gameState.selectedScale);
+        }
+
+        function showStartScreen() {
+            gameState.isPlaying = false;
+            document.getElementById('gameStartOverlay').style.display = 'flex';
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('endGameBtn').style.display = 'none';
+            document.getElementById('gameMode').disabled = false;
+            
+            // Clear any existing notes
+            const existingNotes = document.querySelectorAll('.moving-note');
+            existingNotes.forEach(note => note.remove());
+            
+            const stillContainer = document.getElementById('stillNotesContainer');
+            stillContainer.classList.remove('active');
+            stillContainer.innerHTML = '';
+        }
+
+        function endGame() {
+            gameState.isPlaying = false;
+            
+            // Clear all existing timeouts to stop note generation
+            for (let i = 1; i < 99999; i++) {
+                window.clearTimeout(i);
+            }
+            
+            // Remove all active notes from the screen
+            const existingNotes = document.querySelectorAll('.moving-note');
+            existingNotes.forEach(note => note.remove());
+            
+            // Clear active notes array
+            gameState.activeNotes = [];
+            
+            // Clear still notes
+            const stillContainer = document.getElementById('stillNotesContainer');
+            stillContainer.classList.remove('active');
+            stillContainer.innerHTML = '';
+            gameState.stillNotes = [];
+            
+            // Hide end game button
+            document.getElementById('endGameBtn').style.display = 'none';
+            document.getElementById('gameMode').disabled = false;
+            
+            // Show start screen
+            showStartScreen();
+        }
+
+
+        function generateNote() {
+            const staffSections = {
+                aboveBelow: 0.15,
+                between: 0.15,
+                treble: 0.35,
+                bass: 0.35
+            };
+            
+            const random = Math.random();
+            let selectedSection;
+            
+            if (random < staffSections.aboveBelow) {
+                selectedSection = 'aboveBelow';
+            } else if (random < staffSections.aboveBelow + staffSections.between) {
+                selectedSection = 'between';
+            } else if (random < staffSections.aboveBelow + staffSections.between + staffSections.treble) {
+                selectedSection = 'treble';
+            } else {
+                selectedSection = 'bass';
+            }
+            
+            let availableNotes = [];
+            const allNoteKeys = Object.keys(NOTE_POSITIONS);
+            
+            switch (selectedSection) {
+                case 'aboveBelow':
+                    availableNotes = allNoteKeys.filter(key => {
+                        const position = NOTE_POSITIONS[key];
+                        return position <= 10 || position >= 40;
+                    });
+                    break;
+                case 'between':
+                    availableNotes = allNoteKeys.filter(key => {
+                        const position = NOTE_POSITIONS[key];
+                        return position >= 20 && position <= 30;
+                    });
+                    break;
+                case 'treble':
+                    availableNotes = allNoteKeys.filter(key => {
+                        const position = NOTE_POSITIONS[key];
+                        return position >= 11 && position <= 19;
+                    });
+                    break;
+                case 'bass':
+                    availableNotes = allNoteKeys.filter(key => {
+                        const position = NOTE_POSITIONS[key];
+                        return position >= 31 && position <= 39;
+                    });
+                    break;
+            }
+            
+            if (availableNotes.length === 0) {
+                availableNotes = allNoteKeys;
+            }
+            
+            const randomKey = availableNotes[Math.floor(Math.random() * availableNotes.length)];
+            const match = randomKey.match(/([A-G][#b]?)(\d+)(_treble|_bass)?/);
+            if (!match) {
+                return { note: 'C', octave: 4, hand: '', fullKey: 'C4', accidental: null };
+            }
+            
+            let baseNote = match[1];
+            const octave = parseInt(match[2]);
+            const hand = match[3] || '';
+            
+            const scaleAdjustedNote = getScaleNote(baseNote.charAt(0), gameState.selectedScale);
+            
+            let accidental = null;
+            if (Math.random() < 0.3) {
+                const noteLetter = baseNote.charAt(0);
+                const noteHasAccidental = scaleAdjustedNote.includes('#') || scaleAdjustedNote.includes('b');
+                
+                if (noteHasAccidental) {
+                    accidental = 'natural';
+                } else {
+                    const validAccidentals = [];
+                    
+                    if (!['E', 'B'].includes(noteLetter)) {
+                        validAccidentals.push('sharp');
+                    }
+                    
+                    if (!['F', 'C'].includes(noteLetter)) {
+                        validAccidentals.push('flat');
+                    }
+                    
+                    if (validAccidentals.length > 0) {
+                        accidental = validAccidentals[Math.floor(Math.random() * validAccidentals.length)];
+                    }
+                }
+            }
+            
+            return { 
+                note: baseNote.charAt(0),
+                scaleNote: scaleAdjustedNote,
+                octave: octave,
+                hand: hand,
+                fullKey: randomKey,
+                accidental: accidental
+            };
+        }
+
+        function createNoteElement(noteData, isStill = false) {
+            const noteElement = document.createElement('div');
+            noteElement.className = isStill ? 'still-note' : 'moving-note';
+            
+            // Create note head
+            const noteHead = document.createElement('div');
+            noteHead.className = 'note-head';
+            noteElement.appendChild(noteHead);
+            
+            // Create stem
+            const stem = document.createElement('div');
+            stem.className = 'note-stem';
+            
+            // Determine stem direction and middle region based on position and hand
+            const position = NOTE_POSITIONS[noteData.fullKey] || NOTE_POSITIONS[noteData.note + noteData.octave];
+            const isMiddleRegion = position >= 20 && position <= 30; // Between staves
+            
+            if (isMiddleRegion) {
+                // In middle region, stem direction depends on hand
+                if (noteData.hand === '_bass' || noteData.fullKey.includes('_bass')) {
+                    stem.classList.add('stem-down', 'middle-region');
+                } else if (noteData.hand === '_treble' || noteData.fullKey.includes('_treble')) {
+                    stem.classList.add('stem-up', 'middle-region');
+                } else {
+                    // Default to treble for notes without explicit hand marking
+                    stem.classList.add('stem-up', 'middle-region');
+                }
+            } else {
+                // Outside middle region, use traditional stem direction
+                if (position <= 25) { // Higher notes - stem down
+                    stem.classList.add('stem-down');
+                } else { // Lower notes - stem up
+                    stem.classList.add('stem-up');
+                }
+            }
+            
+            noteElement.appendChild(stem);
+            
+            // Position the note
+            noteElement.style.top = getNotePosition(noteData.note, noteData.octave, noteData.hand || '');
+            noteElement.style.transform = 'translateY(-50%)';
+            
+            // Store note data
+            noteElement.noteData = {
+                note: noteData.note,
+                scaleNote: noteData.scaleNote,
+                accidental: noteData.accidental,
+                octave: noteData.octave,
+                hand: noteData.hand,
+                guessed: false
+            };
+            
+            // Add accidental if needed
+            if (noteData.accidental) {
+                const accidentalElement = document.createElement('div');
+                accidentalElement.style.position = 'absolute';
+                accidentalElement.style.right = '20px'; // Closer to note
+                accidentalElement.style.top = '50%';
+                accidentalElement.style.transform = 'translateY(-50%)';
+                accidentalElement.style.fontSize = '16px';
+                accidentalElement.style.color = 'black';
+                accidentalElement.style.zIndex = '11';
+                accidentalElement.style.fontWeight = 'bold';
+                
+                switch (noteData.accidental) {
+                    case 'sharp': accidentalElement.textContent = '♯'; break;
+                    case 'flat': 
+                        accidentalElement.textContent = '♭'; 
+                        accidentalElement.style.top = 'calc(50% - 3px)';
+                        break;
+                    case 'natural': accidentalElement.textContent = '♮'; break;
+                }
+                
+                noteElement.appendChild(accidentalElement);
+            }
+            
+            return noteElement;
+        }
+
+        function showNote() {
+            if (!gameState.isPlaying || gameState.gameMode !== 'moving') return;
+
+            const noteData = generateNote();
+            const movingNote = createNoteElement(noteData, false);
+            movingNote.style.right = '0px';
+            movingNote.style.animationDuration = '8000ms';
+            
+            document.querySelector('.staff-area').appendChild(movingNote);
+            
+            setTimeout(() => {
+                movingNote.classList.add('animate');
+            }, 100);
+            
+            if (!gameState.activeNotes) gameState.activeNotes = [];
+            gameState.activeNotes.push(movingNote);
+            
+            setTimeout(() => {
+                if (!movingNote.noteData.guessed) {
+                    handleWrongAnswer();
+                }
+                movingNote.remove();
+                gameState.activeNotes = gameState.activeNotes.filter(n => n !== movingNote);
+            }, 8000);
+            
+            const noteCount = DIFFICULTY_SETTINGS[gameState.difficulty].noteCount;
+            const interval = 8000 / noteCount;
+            setTimeout(() => {
+                if (gameState.isPlaying && gameState.gameMode === 'moving') showNote();
+            }, interval);
+        }
+
+        function createStillNotes() {
+            const container = document.getElementById('stillNotesContainer');
+            container.innerHTML = '';
+            container.classList.add('active');
+            
+            gameState.stillNotes = [];
+            gameState.currentStillNoteIndex = 0;
+            
+            const noteCount = 8;
+            const containerWidth = container.offsetWidth || 300;
+            const spacing = containerWidth / (noteCount + 1);
+            
+            for (let i = 0; i < noteCount; i++) {
+                const noteData = generateNote();
+                const stillNote = createNoteElement(noteData, true);
+                stillNote.style.left = `${spacing * (i + 1) - 9}px`; // Center the note
+                stillNote.style.position = 'absolute';
+                
+                // Add index for tracking
+                stillNote.noteIndex = i;
+                
+                container.appendChild(stillNote);
+                gameState.stillNotes.push(stillNote);
+            }
+            
+            // Highlight first note
+            if (gameState.stillNotes.length > 0) {
+                gameState.stillNotes[0].style.border = '2px solid blue';
+                gameState.stillNotes[0].style.borderRadius = '50%';
+            }
+        }
+
+        function getScaleNote(baseLetter, selectedScale) {
+            const scaleAccidentals = SCALE_DEFINITIONS[selectedScale] || [];
+            
+            for (let accidental of scaleAccidentals) {
+                const accidentalLetter = accidental.charAt(0);
+                if (accidentalLetter === baseLetter) {
+                    return accidental;
+                }
+            }
+            
+            return baseLetter;
+        }
+
+        function getEnharmonicEquivalents(note) {
+            const enharmonics = {
+                'C#': ['C#', 'Db'], 'Db': ['C#', 'Db'],
+                'D#': ['D#', 'Eb'], 'Eb': ['D#', 'Eb'],
+                'F#': ['F#', 'Gb'], 'Gb': ['F#', 'Gb'],
+                'G#': ['G#', 'Ab'], 'Ab': ['G#', 'Ab'],
+                'A#': ['A#', 'Bb'], 'Bb': ['A#', 'Bb']
+            };
+            
+            return enharmonics[note] || [note];
+        }
+
+        function handleCorrectAnswer() {
+            gameState.score++;
+            gameState.consecutiveMisses = 0; // Reset consecutive misses
+            
+            if (gameState.score % 8 === 0 && gameState.composersCollected.length < 10) {
+                unlockComposer();
+            }
+
+            if (gameState.composersCollected.length >= 10) {
+                winGame();
+                return;
+            }
+
+            updateDisplay();
+            console.log('Correct! Score:', gameState.score);
+        }
+
+        function handleWrongAnswer() {
+            gameState.consecutiveMisses++;
+            
+            // Visual feedback
+            document.body.classList.add('screen-flicker');
+            setTimeout(() => {
+                document.body.classList.remove('screen-flicker');
+            }, 500);
+
+            if (gameState.consecutiveMisses >= 3) {
+                gameOver();
+                return;
+            }
+
+            updateDisplay();
+            console.log('Wrong! Consecutive misses:', gameState.consecutiveMisses);
+        }
+
+        function playPianoKey(pressedNote) {
+            if (gameState.gameMode === 'moving') {
+                handleMovingNoteGuess(pressedNote);
+            } else {
+                handleStillNoteGuess(pressedNote);
+            }
+        }
+
+        function handleMovingNoteGuess(pressedNote) {
+            if (!gameState.activeNotes || gameState.activeNotes.length === 0) return;
+            
+            let targetNote = null;
+            for (let note of gameState.activeNotes) {
+                if (!note.noteData.guessed) {
+                    targetNote = note;
+                    break;
+                }
+            }
+            
+            if (!targetNote) return;
+
+            gameState.currentNoteOctave = targetNote.noteData.octave;
+            
+            let expectedNote = targetNote.noteData.note;
+            if (targetNote.noteData.accidental) {
+                switch (targetNote.noteData.accidental) {
+                    case 'sharp': expectedNote += '#'; break;
+                    case 'flat': expectedNote += 'b'; break;
+                    case 'natural': expectedNote = targetNote.noteData.note; break;
+                }
+            } else {
+                expectedNote = targetNote.noteData.scaleNote;
+            }
+            
+            const expectedNotes = getEnharmonicEquivalents(expectedNote);
+            if (expectedNotes.includes(pressedNote)) {
+                targetNote.querySelector('.note-head').classList.add('correct');
+                targetNote.noteData.guessed = true;
+                handleCorrectAnswer();
+            } else {
+                targetNote.querySelector('.note-head').classList.add('incorrect');
+                targetNote.noteData.guessed = true;
+                handleWrongAnswer();
+            }
+        }
+
+        function handleStillNoteGuess(pressedNote) {
+            if (!gameState.stillNotes || gameState.currentStillNoteIndex >= gameState.stillNotes.length) return;
+            
+            const currentNote = gameState.stillNotes[gameState.currentStillNoteIndex];
+            if (!currentNote || currentNote.noteData.guessed) return;
+
+            gameState.currentNoteOctave = currentNote.noteData.octave;
+            
+            let expectedNote = currentNote.noteData.note;
+            if (currentNote.noteData.accidental) {
+                switch (currentNote.noteData.accidental) {
+                    case 'sharp': expectedNote += '#'; break;
+                    case 'flat': expectedNote += 'b'; break;
+                    case 'natural': expectedNote = currentNote.noteData.note; break;
+                }
+            } else {
+                expectedNote = currentNote.noteData.scaleNote;
+            }
+            
+            const expectedNotes = getEnharmonicEquivalents(expectedNote);
+            if (expectedNotes.includes(pressedNote)) {
+                currentNote.querySelector('.note-head').classList.add('correct');
+                currentNote.noteData.guessed = true;
+                currentNote.style.border = 'none';
+                handleCorrectAnswer();
+                
+                // Move to next note
+                gameState.currentStillNoteIndex++;
+                if (gameState.currentStillNoteIndex < gameState.stillNotes.length) {
+                    const nextNote = gameState.stillNotes[gameState.currentStillNoteIndex];
+                    nextNote.style.border = '2px solid blue';
+                    nextNote.style.borderRadius = '50%';
+                } else {
+                    // All notes completed, create new set
+                    setTimeout(() => createStillNotes(), 1000);
+                }
+            } else {
+                currentNote.querySelector('.note-head').classList.add('incorrect');
+                currentNote.noteData.guessed = true;
+                currentNote.style.border = 'none';
+                handleWrongAnswer();
+                
+                // Move to next note even after wrong answer
+                gameState.currentStillNoteIndex++;
+                if (gameState.currentStillNoteIndex < gameState.stillNotes.length) {
+                    const nextNote = gameState.stillNotes[gameState.currentStillNoteIndex];
+                    nextNote.style.border = '2px solid blue';
+                    nextNote.style.borderRadius = '50%';
+                } else {
+                    // All notes completed, create new set
+                    setTimeout(() => createStillNotes(), 1000);
+                }
+            }
+        }
+
+        function unlockComposer() {
+            const availableComposers = COMPOSERS.filter(c => !gameState.composersCollected.includes(c));
+            if (availableComposers.length === 0) return;
+
+            const randomComposer = availableComposers[Math.floor(Math.random() * availableComposers.length)];
+            gameState.composersCollected.push(randomComposer);
+
+            // Create falling composer animation
+            const staffArea = document.querySelector('.staff-area');
+            const fallingComposer = document.createElement('div');
+            fallingComposer.className = 'falling-composer';
+            fallingComposer.textContent = randomComposer;
+            fallingComposer.style.left = Math.random() * (staffArea.offsetWidth - 50) + 'px';
+            
+            staffArea.appendChild(fallingComposer);
+            
+            // Update composer portrait
+            const portraitIndex = COMPOSERS.indexOf(randomComposer);
+            const portrait = document.getElementById(`composer-${portraitIndex}`);
+            if (portrait) {
+                setTimeout(() => {
+                    portrait.classList.add('collected');
+                }, 1000);
+            }
+            
+            // Remove falling element
+            setTimeout(() => {
+                fallingComposer.remove();
+            }, 2000);
+
+            updateDisplay();
+            console.log('Unlocked composer:', randomComposer);
+        }
+
+        function gameOver() {
+            gameState.isPlaying = false;
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('gameOver').style.display = 'flex';
+            console.log('Game Over! Final score:', gameState.score);
+        }
+
+        function winGame() {
+            gameState.isPlaying = false;
+            document.getElementById('gameOver').innerHTML = `
+                <div>Congratulations!</div>
+                <div>You collected all 10 composers!</div>
+                <div>Final Score: ${gameState.score}</div>
+                <button class="play-again-btn" onclick="showStartScreen()">Play Again</button>
+            `;
+            document.getElementById('gameOver').style.display = 'flex';
+            console.log('Game Won!');
+        }
+
+        function startNewGame() {
+            // Add this at the beginning of startNewGame()
+            if (Tone.context.state !== 'running') {
+                Tone.start().then(() => {
+                    // Trigger a silent note to preload samples
+                    piano.triggerAttackRelease("C4", "1n", "+0", 0);
+                });
+            }
+            document.getElementById('endGameBtn').style.display = 'inline-block';
+            document.getElementById('gameMode').disabled = true;
+
+            gameState = {
+                score: 0,
+                consecutiveMisses: 0,
+                currentNote: null,
+                currentNoteOctave: 4,
+                selectedScale: document.getElementById('scale').value,
+                difficulty: document.getElementById('difficultySelect').value,
+                gameMode: document.getElementById('gameMode').value,
+                isPlaying: true,
+                composersCollected: [],
+                waitingForAnswer: false,
+                noteStartTime: 0,
+                activeNotes: [],
+                stillNotes: [],
+                currentStillNoteIndex: 0
+            };
+
+            document.getElementById('gameStartOverlay').style.display = 'none';
+            document.getElementById('gameOver').style.display = 'none';
+            
+            // Clear any existing notes
+            const existingNotes = document.querySelectorAll('.moving-note');
+            existingNotes.forEach(note => note.remove());
+            
+            updateDisplay();
+            
+            // Start appropriate game mode
+            if (gameState.gameMode === 'moving') {
+                setTimeout(showNote, 1000);
+            } else {
+                setTimeout(createStillNotes, 1000);
+            }
+            
+            console.log('New game started in', gameState.gameMode, 'mode!');
+        }
+
+        function updateDisplay() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lives').textContent = gameState.consecutiveMisses;
+            document.getElementById('composersCount').textContent = gameState.composersCollected.length;
+        }
+
+        function displayKeySignature(selectedScale) {
+            // Clear existing accidentals
+            const existingAccidentals = document.querySelectorAll('.key-signature-accidental');
+            existingAccidentals.forEach(acc => acc.remove());
+            
+            const scaleAccidentals = SCALE_DEFINITIONS[selectedScale] || [];
+            const staffArea = document.querySelector('.staff-area');
+            
+            scaleAccidentals.forEach((accidental, index) => {
+                const positions = ACCIDENTAL_POSITIONS[accidental];
+                if (!positions) return;
+                
+                // Create accidentals for both treble and bass clefs
+                positions.forEach(position => {
+                    const accidentalElement = document.createElement('div');
+                    accidentalElement.className = 'key-signature-accidental';
+                    accidentalElement.style.position = 'absolute';
+                    
+                    if (accidental.includes('#')) {
+                        accidentalElement.style.fontSize = '17px';
+                        accidentalElement.style.transform = 'translateY(-50%)';
+                        accidentalElement.textContent = '♯';
+                    } else {
+                        accidentalElement.style.fontSize = '20px';
+                        accidentalElement.style.transform = 'translateY(-60%)';
+                        accidentalElement.textContent = '♭';
+                    }
+                    
+                    accidentalElement.style.color = '#333';
+                    accidentalElement.style.zIndex = '5';
+                    accidentalElement.style.fontWeight = 'bold';
+                    
+                    accidentalElement.style.left = (60 + (index * 8)) + 'px';
+                    accidentalElement.style.top = `calc(${position.position - 1} * (100% / 48))`;
+                    
+                    staffArea.appendChild(accidentalElement);
+                });
+            });
+        }
+
+        // Piano sound setup
+        const piano = new Tone.Sampler({
+            urls: {
+                A0: "A0.[mp3|ogg]", C1: "C1.[mp3|ogg]", "D#1": "Ds1.[mp3|ogg]", "F#1": "Fs1.[mp3|ogg]",
+                A1: "A1.[mp3|ogg]", C2: "C2.[mp3|ogg]", "D#2": "Ds2.[mp3|ogg]", "F#2": "Fs2.[mp3|ogg]",
+                A2: "A2.[mp3|ogg]", C3: "C3.[mp3|ogg]", "D#3": "Ds3.[mp3|ogg]", "F#3": "Fs3.[mp3|ogg]",
+                A3: "A3.[mp3|ogg]", C4: "C4.[mp3|ogg]", "D#4": "Ds4.[mp3|ogg]", "F#4": "Fs4.[mp3|ogg]",
+                A4: "A4.[mp3|ogg]", C5: "C5.[mp3|ogg]", "D#5": "Ds5.[mp3|ogg]", "F#5": "Fs5.[mp3|ogg]",
+                A5: "A5.[mp3|ogg]", C6: "C6.[mp3|ogg]", "D#6": "Ds6.[mp3|ogg]", "F#6": "Fs6.[mp3|ogg]",
+                A6: "A6.[mp3|ogg]"
+            },
+            baseUrl: "https://tonejs.github.io/audio/salamander/"
+        }).toDestination();
+
+        function convertToToneFormat(note, octave, hand = '') {
+            let toneNote = note.replace('#', '#').replace('b', 'b');
+            return toneNote + octave;
+        }
+
+        async function startAudio() {
+            if (Tone.context.state !== 'running') {
+                await Tone.start();
+                console.log('Audio context started');
+            }
+        }
+
+        function playPianoSound(note, octave) {
+            if (piano) {
+                const toneFormat = convertToToneFormat(note, octave);
+                const equivalents = getEnharmonicEquivalents(note);
+                
+                if (equivalents.length > 1) {
+                    console.log('Playing:', equivalents.join('/') + octave);
+                } else {
+                    console.log('Playing:', toneFormat);
+                }
+                
+                piano.triggerAttackRelease(toneFormat, "1n");
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initGame);
+    </script>
+</body>
+</html>
