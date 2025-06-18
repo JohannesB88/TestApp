@@ -1755,6 +1755,11 @@
         }
 
         function playPianoSound(note, octave) {
+            // Force resume audio context if suspended (mute switch fix)
+            if (Tone.context.state === 'suspended') {
+                Tone.context.resume();
+            }
+            
             if (piano) {
                 const toneFormat = convertToToneFormat(note, octave);
                 const equivalents = getEnharmonicEquivalents(note);
@@ -1768,7 +1773,6 @@
                 piano.triggerAttackRelease(toneFormat, "1n");
             }
         }
-
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', initGame);
     </script>
