@@ -1634,12 +1634,16 @@
         }
 
         async function startNewGame() {
-            // Enable audio context on iOS
+            // Enable audio context and handle mute switch
             if (Tone.context.state !== 'running') {
                 await Tone.start();
-                // Trigger a silent note to preload samples
-                piano.triggerAttackRelease("C4", "1n", "+0", 0);
-                console.log('Audio context started for iOS');
+                console.log('Audio context started');
+            }
+            
+            // Force resume if suspended (iOS mute switch)
+            if (Tone.context.state === 'suspended') {
+                await Tone.context.resume();
+                console.log('Audio context resumed from mute');
             }
         
             // Your existing game state reset
