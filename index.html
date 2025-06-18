@@ -1641,16 +1641,8 @@
                 piano.triggerAttackRelease("C4", "1n", "+0", 0);
                 console.log('Audio context started for iOS');
             }
-            // Add this at the beginning of startNewGame()
-            if (Tone.context.state !== 'running') {
-                Tone.start().then(() => {
-                    // Trigger a silent note to preload samples
-                    piano.triggerAttackRelease("C4", "1n", "+0", 0);
-                });
-            }
-            document.getElementById('endGameBtn').style.display = 'inline-block';
-            document.getElementById('gameMode').disabled = true;
-
+        
+            // Your existing game state reset
             gameState = {
                 score: 0,
                 consecutiveMisses: 0,
@@ -1667,9 +1659,12 @@
                 stillNotes: [],
                 currentStillNoteIndex: 0
             };
-
+        
+            // Your existing UI updates
             document.getElementById('gameStartOverlay').style.display = 'none';
             document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('endGameBtn').style.display = 'inline-block';
+            document.getElementById('gameMode').disabled = true;
             
             // Clear any existing notes
             const existingNotes = document.querySelectorAll('.moving-note');
