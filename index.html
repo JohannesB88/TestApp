@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Piano Learning Game</title>
+
+
+    <title>Test app name replace</title>
     <!-- Add Tone.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 
@@ -560,10 +562,15 @@
             color: white;
             font-size: 24px;
             flex-direction: column;
+            z-index: 100;
+            overflow-y: auto;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
         .play-again-btn {
             margin-top: 20px;
+            margin-bottom: 20px;
             padding: 10px 20px;
             font-size: 18px;
             background: #4CAF50;
@@ -640,7 +647,7 @@
         <!-- Header with Score and Settings -->
         <div class="header">
             <div class="score-display">
-                Score: <span id="score">0</span> | 
+                Score: <span id="score">0</span>/<span id="targetScore">80</span> |
                 <span class="lives">Misses: <span id="lives">0</span>/3</span>
             </div>
             <button id="endGameBtn" class="end-game-btn" onclick="endGame()" style="display: none;">End Game</button>
@@ -664,13 +671,18 @@
                     <option value="Dm">D Minor</option>
                     <option value="Gm">G Minor</option>
                     <option value="Cm">C Minor</option>
+                    <option value="random">Random</option>
                 </select>
                 
                 <select id="difficultySelect">
                     <option value="beginner">Beginner</option>
-                    <option value="experienced">Experienced</option>
+                    <option value="novice">Novice</option>
+                    <option value="intermediate">Intermediate</option>
                     <option value="advanced">Advanced</option>
-                    <option value="pro">Pro</option>
+                    <option value="expert">Expert</option>
+                    <option value="master">Master</option>
+                    <option value="legendary">Legendary</option>
+                    <option value="impossible">Impossible</option>
                 </select>
 
                 <select id="gameMode">
@@ -759,6 +771,10 @@
     </div>
 
     <script>
+
+        // Game Configuration
+        const TARGET_SCORE = 80;
+
         // Game State
         let gameState = {
             score: 0,
@@ -910,9 +926,13 @@
         // Difficulty settings
         const DIFFICULTY_SETTINGS = {
             beginner: { noteSpeed: 8000, noteCount: 1 },
-            experienced: { noteSpeed: 8000, noteCount: 2 },
-            advanced: { noteSpeed: 8000, noteCount: 3 },
-            pro: { noteSpeed: 8000, noteCount: 4 }
+            novice: { noteSpeed: 8000, noteCount: 2 },
+            intermediate: { noteSpeed: 8000, noteCount: 3 },
+            advanced: { noteSpeed: 8000, noteCount: 4 },
+            expert: { noteSpeed: 8000, noteCount: 5 },
+            master: { noteSpeed: 8000, noteCount: 8 },
+            legendary: { noteSpeed: 8000, noteCount: 11 },
+            impossible: { noteSpeed: 8000, noteCount: 14 }
         };
 
         // Initialize the game
@@ -1272,7 +1292,8 @@
                 octave: octave,
                 hand: hand,
                 fullKey: randomKey,
-                accidental: accidental
+                accidental: accidental,
+                area: selectedSection  // Add this line
             };
         }
 
@@ -1325,6 +1346,7 @@
                 accidental: noteData.accidental,
                 octave: noteData.octave,
                 hand: noteData.hand,
+                area: noteData.area,  // Add this line
                 guessed: false
             };
             
@@ -1446,13 +1468,32 @@
 
         function handleCorrectAnswer() {
             gameState.score++;
-            gameState.consecutiveMisses = 0; // Reset consecutive misses
+            gameState.consecutiveMisses = 0;
+            
+            // Track reaction time
+            const currentTime = Date.now();
+            const reactionTime = currentTime - gameState.lastNoteTime;
+            gameState.reactionTimes.push(reactionTime);
+            gameState.lastNoteTime = currentTime;
+            
+            // Track area performance
+            let currentNote = null;
+            if (gameState.gameMode === 'moving') {
+                currentNote = gameState.activeNotes.find(n => n.noteData.guessed);
+            } else {
+                currentNote = gameState.stillNotes[gameState.currentStillNoteIndex - 1];
+            }
+
+            if (currentNote && currentNote.noteData && currentNote.noteData.area) {
+                gameState.areaStats[currentNote.noteData.area].correct++;
+                gameState.areaStats[currentNote.noteData.area].total++;
+            }
             
             if (gameState.score % 8 === 0 && gameState.composersCollected.length < 10) {
                 unlockComposer();
             }
 
-            if (gameState.composersCollected.length >= 10) {
+            if (gameState.score >= TARGET_SCORE) {
                 winGame();
                 return;
             }
@@ -1463,12 +1504,32 @@
 
         function handleWrongAnswer() {
             gameState.consecutiveMisses++;
+            gameState.totalMisses++;
             
-            // Visual feedback
-            document.body.classList.add('screen-flicker');
-            setTimeout(() => {
-                document.body.classList.remove('screen-flicker');
-            }, 500);
+            // Track area performance for wrong answers
+            let currentNote = null;
+            if (gameState.gameMode === 'moving') {
+                currentNote = gameState.activeNotes.find(n => n.noteData.guessed);
+            } else {
+                currentNote = gameState.stillNotes[gameState.currentStillNoteIndex];
+            }
+
+            if (currentNote && currentNote.noteData && currentNote.noteData.area) {
+                gameState.areaStats[currentNote.noteData.area].total++;
+            }
+            
+            // Reset reaction time tracking
+            gameState.lastNoteTime = Date.now();
+            
+            // Visual feedback - only if game is still running
+            if (gameState.isPlaying) {
+                document.body.classList.add('screen-flicker');
+                setTimeout(() => {
+                    if (gameState.isPlaying) {
+                        document.body.classList.remove('screen-flicker');
+                    }
+                }, 500);
+            }
 
             if (gameState.consecutiveMisses >= 3) {
                 gameOver();
@@ -1616,33 +1677,158 @@
 
         function gameOver() {
             gameState.isPlaying = false;
-            document.getElementById('finalScore').textContent = gameState.score;
+            
+            // Clear all existing timeouts to stop note generation
+            for (let i = 1; i < 99999; i++) {
+                window.clearTimeout(i);
+            }
+            
+            // Remove all active notes from the screen
+            const existingNotes = document.querySelectorAll('.moving-note');
+            existingNotes.forEach(note => note.remove());
+            
+            // Clear active notes array
+            gameState.activeNotes = [];
+            
+            // Clear still notes
+            const stillContainer = document.getElementById('stillNotesContainer');
+            stillContainer.classList.remove('active');
+            stillContainer.innerHTML = '';
+            gameState.stillNotes = [];
+            
+            // Stop any screen flickering
+            document.body.classList.remove('screen-flicker');
+            
+            // Calculate statistics
+            const totalNotes = gameState.score + gameState.totalMisses;
+            const accuracy = totalNotes > 0 ? Math.round((gameState.score / totalNotes) * 100) : 0;
+            const avgReactionTime = gameState.reactionTimes.length > 0 ? 
+                Math.round(gameState.reactionTimes.reduce((a, b) => a + b, 0) / gameState.reactionTimes.length) : 0;
+
+            // Calculate final score: (accuracy% * notes_collected / target_notes) * 100
+            const finalScore = Math.round((accuracy / 100) * (gameState.score / TARGET_SCORE) * 100);
+
+            // Find worst performing area
+            let worstArea = 'None';
+            let worstAccuracy = 100;
+            Object.entries(gameState.areaStats).forEach(([area, stats]) => {
+                if (stats.total > 0) {
+                    const areaAccuracy = (stats.correct / stats.total) * 100;
+                    if (areaAccuracy < worstAccuracy) {
+                        worstAccuracy = areaAccuracy;
+                        worstArea = area;
+                    }
+                }
+            });
+
+            const areaNames = {
+                aboveBelow: 'Above/Below Staff',
+                between: 'Between Staves',
+                treble: 'Treble Clef',
+                bass: 'Bass Clef'
+            };
+            
+            document.getElementById('gameOver').innerHTML = `
+                <div>Game Over!</div>
+                <div style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #FFD700;">Final Score: ${finalScore}%</div>
+                </div>
+                <div style="margin: 20px 0; font-size: 16px;">
+                    <div><strong>Notes Hit:</strong> ${gameState.score}/${TARGET_SCORE}</div>
+                    <div><strong>Accuracy:</strong> ${accuracy}%</div>
+                    <div><strong>Avg Reaction Time:</strong> ${avgReactionTime}ms</div>
+                    <div><strong>Area for Improvement:</strong> ${areaNames[worstArea] || worstArea}</div>
+                </div>
+                <button class="play-again-btn" onclick="showStartScreen()">Play Again</button>
+            `;
+            
             document.getElementById('gameOver').style.display = 'flex';
             console.log('Game Over! Final score:', gameState.score);
         }
 
         function winGame() {
             gameState.isPlaying = false;
+            
+            // Clear all existing timeouts to stop note generation
+            for (let i = 1; i < 99999; i++) {
+                window.clearTimeout(i);
+            }
+            
+            // Remove all active notes from the screen
+            const existingNotes = document.querySelectorAll('.moving-note');
+            existingNotes.forEach(note => note.remove());
+            
+            // Clear active notes array
+            gameState.activeNotes = [];
+            
+            // Clear still notes
+            const stillContainer = document.getElementById('stillNotesContainer');
+            stillContainer.classList.remove('active');
+            stillContainer.innerHTML = '';
+            gameState.stillNotes = [];
+            
+            // Stop any screen flickering
+            document.body.classList.remove('screen-flicker');
+            
+            // Calculate statistics
+            const totalNotes = gameState.score + gameState.totalMisses;
+            const accuracy = totalNotes > 0 ? Math.round((gameState.score / totalNotes) * 100) : 0;
+            const avgReactionTime = gameState.reactionTimes.length > 0 ? 
+                Math.round(gameState.reactionTimes.reduce((a, b) => a + b, 0) / gameState.reactionTimes.length) : 0;
+
+            // Calculate final score: (accuracy% * notes_collected / target_notes) * 100
+            const finalScore = Math.round((accuracy / 100) * (gameState.score / TARGET_SCORE) * 100);
+
+            // Find worst performing area
+            let worstArea = 'None';
+            let worstAccuracy = 100;
+            Object.entries(gameState.areaStats).forEach(([area, stats]) => {
+                if (stats.total > 0) {
+                    const areaAccuracy = (stats.correct / stats.total) * 100;
+                    if (areaAccuracy < worstAccuracy) {
+                        worstAccuracy = areaAccuracy;
+                        worstArea = area;
+                    }
+                }
+            });
+
+            const areaNames = {
+                aboveBelow: 'Above/Below Staff',
+                between: 'Between Staves',
+                treble: 'Treble Clef',
+                bass: 'Bass Clef'
+            };
+            
             document.getElementById('gameOver').innerHTML = `
-                <div>Congratulations!</div>
-                <div>You collected all 10 composers!</div>
-                <div>Final Score: ${gameState.score}</div>
+                <div>🎉 Congratulations! 🎉</div>
+                <div>You Won!</div>
+                <div style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                    <div style="font-size: 24px; font-weight: bold; color: #FFD700;">Final Score: ${finalScore}%</div>
+                </div>
+                <div style="margin: 20px 0; font-size: 16px;">
+                    <div><strong>Notes Hit:</strong> ${gameState.score}/${TARGET_SCORE}</div>
+                    <div><strong>Accuracy:</strong> ${accuracy}%</div>
+                    <div><strong>Avg Reaction Time:</strong> ${avgReactionTime}ms</div>
+                    <div><strong>Area for Improvement:</strong> ${areaNames[worstArea] || worstArea}</div>
+                </div>
                 <button class="play-again-btn" onclick="showStartScreen()">Play Again</button>
             `;
+            
             document.getElementById('gameOver').style.display = 'flex';
             console.log('Game Won!');
         }
 
-        async function startNewGame() {
-            // Enable audio context on iOS
+        function startNewGame() {
+            // Add this at the beginning of startNewGame()
             if (Tone.context.state !== 'running') {
-                await Tone.start();
-                // Trigger a silent note to preload samples
-                piano.triggerAttackRelease("C4", "1n", "+0", 0);
-                console.log('Audio context started for iOS');
+                Tone.start().then(() => {
+                    // Trigger a silent note to preload samples
+                    piano.triggerAttackRelease("C4", "1n", "+0", 0);
+                });
             }
-        
-            // Your existing game state reset
+            document.getElementById('endGameBtn').style.display = 'inline-block';
+            document.getElementById('gameMode').disabled = true;
+
             gameState = {
                 score: 0,
                 consecutiveMisses: 0,
@@ -1657,14 +1843,32 @@
                 noteStartTime: 0,
                 activeNotes: [],
                 stillNotes: [],
-                currentStillNoteIndex: 0
+                currentStillNoteIndex: 0,
+                // New tracking variables
+                totalMisses: 0,
+                reactionTimes: [],
+                lastNoteTime: Date.now(),
+                areaStats: {
+                    aboveBelow: { correct: 0, total: 0 },
+                    between: { correct: 0, total: 0 },
+                    treble: { correct: 0, total: 0 },
+                    bass: { correct: 0, total: 0 }
+                }
             };
-        
-            // Your existing UI updates
+
+            // Handle random scale selection
+            if (gameState.selectedScale === 'random') {
+                const availableScales = ['C', 'G', 'D', 'A', 'E', 'F', 'Bb', 'Am', 'Em', 'Bm', 'Dm', 'Gm', 'Cm'];
+                gameState.selectedScale = availableScales[Math.floor(Math.random() * availableScales.length)];
+                console.log('Random scale selected:', gameState.selectedScale);
+            }
+
+            // Update key signature display with the actual scale
+            displayKeySignature(gameState.selectedScale);
+
+
             document.getElementById('gameStartOverlay').style.display = 'none';
             document.getElementById('gameOver').style.display = 'none';
-            document.getElementById('endGameBtn').style.display = 'inline-block';
-            document.getElementById('gameMode').disabled = true;
             
             // Clear any existing notes
             const existingNotes = document.querySelectorAll('.moving-note');
@@ -1684,6 +1888,7 @@
 
         function updateDisplay() {
             document.getElementById('score').textContent = gameState.score;
+            document.getElementById('targetScore').textContent = TARGET_SCORE;
             document.getElementById('lives').textContent = gameState.consecutiveMisses;
             document.getElementById('composersCount').textContent = gameState.composersCollected.length;
         }
@@ -1741,6 +1946,15 @@
             },
             baseUrl: "https://tonejs.github.io/audio/salamander/"
         }).toDestination();
+
+        // Reduce audio latency for better responsiveness
+        Tone.context.lookAhead = 0;
+        Tone.context.latencyHint = "interactive";
+
+        // Log latency info for debugging
+        if (Tone.context.rawContext) {
+            console.log('Audio context base latency:', Tone.context.rawContext.baseLatency);
+        }
 
         function convertToToneFormat(note, octave, hand = '') {
             let toneNote = note.replace('#', '#').replace('b', 'b');
