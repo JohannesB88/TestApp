@@ -178,7 +178,8 @@
 
         .treble-clef {
             top: calc(14 * (100% / 49));
-            transform: translateY(-40%);
+            transform: translateY(-50%);
+            font-size: 70px;
         }
 
         .bass-clef {
@@ -186,7 +187,6 @@
             transform: translateY(-53%);
         }
 
-        /* Moving Note Head - Proper Music Note */
         .moving-note {
             position: absolute;
             right: 20px;
@@ -198,7 +198,6 @@
             z-index: 10;
             transition: none;
         }
-
         /* Oval note head with slight tilt */
         .note-head {
             width: 16px;
@@ -254,7 +253,7 @@
         }
 
         @keyframes moveNote {
-            from { right: 0px; }
+            from { right: -30px; }
             to { right: calc(100% + 30px); }
         }
 
@@ -367,19 +366,11 @@
         }
 
         /* Composers Collection Area */
-        /* Scale and Wrong Note Display Area */
+
         .composers-area {
-            background: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 8px 12px;
-            margin-bottom: 10px;
-            min-height: 30px;
-            order: 2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: none;
         }
+
 
         .scale-display {
             font-size: 20px;
@@ -675,7 +666,7 @@
 
             <!-- Start Game Overlay -->
             <div class="game-start-overlay" id="gameStartOverlay">
-                <div>Piano Learning Game</div>
+                <div>Note Reading Game</div>
                 <div style="font-size: 20px; margin: 10px 0; max-width: 300px; line-height: 1.4;">
                     Configure your settings above and click Start to begin!
                 </div>
@@ -1142,6 +1133,12 @@
             document.getElementById('wrongNoteDisplay').style.display = 'none';
             // Reset progress bar
             document.getElementById('progressBar').style.width = '0%';
+
+            // Re-enable game configuration buttons
+            document.getElementById('scale').disabled = false;
+            document.getElementById('difficultySelect').disabled = false;
+            document.getElementById('gameMode').disabled = false;
+
         }
 
         function endGame() {
@@ -1168,6 +1165,15 @@
             // Hide end game button
             document.getElementById('endGameBtn').style.display = 'none';
             document.getElementById('gameMode').disabled = false;
+
+            // Re-enable game configuration buttons
+            document.getElementById('scale').disabled = false;
+            document.getElementById('difficultySelect').disabled = false;
+            document.getElementById('gameMode').disabled = false;
+
+            // Hide end game button
+            document.getElementById('endGameBtn').style.display = 'none';
+
             
             // Show start screen
             showStartScreen();
@@ -1361,11 +1367,11 @@
 
             const noteData = generateNote();
             const movingNote = createNoteElement(noteData, false);
-            movingNote.style.right = '0px';
+            movingNote.style.right = '-30px'; // Start outside the frame
             movingNote.style.animationDuration = '8000ms';
-            
+
             document.querySelector('.staff-area').appendChild(movingNote);
-            
+
             setTimeout(() => {
                 movingNote.classList.add('animate');
             }, 100);
@@ -1836,6 +1842,12 @@
                     bass: { correct: 0, total: 0 }
                 }
             };
+
+            // Disable game configuration buttons during play
+            document.getElementById('scale').disabled = true;
+            document.getElementById('difficultySelect').disabled = true;
+            document.getElementById('gameMode').disabled = true;
+
 
             // Handle random scale selection
             if (gameState.selectedScale === 'random') {
