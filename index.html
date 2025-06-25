@@ -30,12 +30,12 @@
             justify-content: center;
             align-items: center;
             margin-bottom: 10px;
-            font-size: 14px;
+            font-size: 20px;
             position: relative;
         }
 
         .score-display {
-            font-size: 16px;
+            font-size: 20px;
             font-weight: bold;
         }
 
@@ -57,10 +57,10 @@
 
         select {
             padding: 2px;
-            font-size: 14px;
+            font-size: 18px;
             border-radius: 4px;
             border: 1px solid #ccc;
-            width: 100px; /* Fixed width for all dropdowns */
+            width: 120px; /* Fixed width for all dropdowns */
             box-sizing: border-box;
         }
 
@@ -288,6 +288,7 @@
             margin-bottom: 15px;
         }
 
+
         .piano-keys {
             display: flex;
             justify-content: center;
@@ -366,95 +367,69 @@
         }
 
         /* Composers Collection Area */
+        /* Scale and Wrong Note Display Area */
         .composers-area {
             background: #f9f9f9;
             border: 1px solid #ddd;
             border-radius: 8px;
-            padding: 4px 8px;
+            padding: 8px 12px;
             margin-bottom: 10px;
-            min-height: 25px;
-            order: 2; /* Positioned after staff area */
-        }
-
-        .composers-title {
-            font-size: 10px;
-            font-weight: bold;
-            margin-bottom: 3px;
-            color: #666;
-        }
-
-        .composer-portraits {
+            min-height: 30px;
+            order: 2;
             display: flex;
-            flex-wrap: wrap;
-            gap: 3px;
-            justify-content: center;
             align-items: center;
-            min-height: 20px;
+            justify-content: center;
         }
 
-        .composer-portrait {
-            width: 18px;
-            height: 18px;
+        .scale-display {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .wrong-note-display {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .wrong-note {
+            color: red;
+        }
+
+        .correct-note-circle {
+            color: black;
+            border: 2px solid blue;
+            border-radius: 20%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            width: 100%;
+            height: 8px;
             background: #ddd;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 6px;
-            text-align: center;
-            border: 1px solid #999;
-            opacity: 0.3;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            border: 1px solid #ccc;
         }
 
-        .composer-portrait.collected {
-            opacity: 1;
-            background: #4CAF50;
-            color: white;
-            animation: collectComposer 1s ease-in-out;
-        }
-
-        @keyframes collectComposer {
-            0% { transform: scale(0) translateY(-50px); opacity: 0; }
-            50% { transform: scale(1.2) translateY(-20px); opacity: 1; }
-            100% { transform: scale(1) translateY(0); opacity: 1; }
-        }
-
-        /* Falling composer ghost */
-        .falling-composer {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background: rgba(76, 175, 80, 0.8);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 8px;
-            text-align: center;
-            color: white;
-            font-weight: bold;
-            z-index: 20;
-            animation: fallDown 2s ease-in-out forwards;
-            pointer-events: none;
-        }
-
-        @keyframes fallDown {
-            0% { 
-                top: -60px; 
-                opacity: 0.8;
-                transform: scale(1.2);
-            }
-            50% {
-                opacity: 1;
-                transform: scale(1);
-            }
-            100% { 
-                top: calc(100% - 100px); 
-                opacity: 0;
-                transform: scale(0.8);
-            }
-        }
-        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50 0%, #45a049 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 3px;
+        }        
 
         .support-notes-toggle {
             position: absolute;
@@ -536,7 +511,7 @@
         .start-game-btn {
             margin-top: 15px;
             padding: 12px 24px;
-            font-size: 16px;
+            font-size: 20px;
             background: #4CAF50;
             color: white;
             border: none;
@@ -572,7 +547,7 @@
             margin-top: 20px;
             margin-bottom: 20px;
             padding: 10px 20px;
-            font-size: 18px;
+            font-size: 20px;
             background: #4CAF50;
             color: white;
             border: none;
@@ -595,7 +570,7 @@
         .difficulty-display {
             position: absolute;
             right: 0;
-            font-size: 12px;
+            font-size: 15px;
             color: #666;
         }
 
@@ -701,7 +676,7 @@
             <!-- Start Game Overlay -->
             <div class="game-start-overlay" id="gameStartOverlay">
                 <div>Piano Learning Game</div>
-                <div style="font-size: 14px; margin: 10px 0; max-width: 300px; line-height: 1.4;">
+                <div style="font-size: 20px; margin: 10px 0; max-width: 300px; line-height: 1.4;">
                     Configure your settings above and click Start to begin!
                 </div>
                 <button class="start-game-btn" onclick="startNewGame()">Start Game</button>
@@ -746,11 +721,17 @@
             </div>
         </div>
 
+        <!-- Progress Bar -->
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
         <!-- Composers Collection Area -->
         <div class="composers-area">
-            <div class="composers-title">Composers Collection (<span id="composersCount">0</span>/10)</div>
-            <div class="composer-portraits" id="composerPortraits">
-                <!-- Composer portraits will be generated here -->
+            <div id="scaleDisplay" class="scale-display" style="display: none;">Scale: C Major</div>
+            <div id="wrongNoteDisplay" class="wrong-note-display" style="display: none;">
+                <span class="wrong-note" id="wrongNote"></span>
+                <span class="correct-note-circle" id="correctNote"></span>
             </div>
         </div>
 
@@ -785,7 +766,6 @@
             difficulty: 'beginner',
             gameMode: 'moving',
             isPlaying: false,
-            composersCollected: [],
             waitingForAnswer: false,
             noteStartTime: 0,
             activeNotes: [],
@@ -829,6 +809,14 @@
             }
             
             return 'calc(14 * (100% / 48))'; // Default position
+        }
+
+        function playPianoKey(pressedNote) {
+            if (gameState.gameMode === 'moving') {
+                handleMovingNoteGuess(pressedNote);
+            } else {
+                handleStillNoteGuess(pressedNote);
+            }
         }
 
         // Scale definitions
@@ -938,25 +926,10 @@
         // Initialize the game
         function initGame() {
             createPianoKeys();
-            createComposerPortraits();
             updateDisplay();
             setupEventListeners();
             showStartScreen();
             console.log('Piano Learning Game initialized!');
-        }
-
-        function createComposerPortraits() {
-            const container = document.getElementById('composerPortraits');
-            container.innerHTML = '';
-            
-            COMPOSERS.forEach((composer, index) => {
-                const portrait = document.createElement('div');
-                portrait.className = 'composer-portrait';
-                portrait.id = `composer-${index}`;
-                portrait.textContent = composer.slice(0, 3); // First 3 letters
-                portrait.title = composer;
-                container.appendChild(portrait);
-            });
         }
 
         // Add support notes function:
@@ -1030,7 +1003,7 @@
             // Add this to createPianoKeys() function after the existing toggle button:
             const supportNotesToggle = document.createElement('div');
             supportNotesToggle.className = 'support-notes-toggle';
-            supportNotesToggle.innerHTML = '♪';
+            supportNotesToggle.innerHTML = '-c-';
             supportNotesToggle.title = 'Toggle support notes';
 
             let supportNotesVisible = false;
@@ -1163,6 +1136,12 @@
             const stillContainer = document.getElementById('stillNotesContainer');
             stillContainer.classList.remove('active');
             stillContainer.innerHTML = '';
+            // Reset display areas
+            // Reset display areas
+            document.getElementById('scaleDisplay').style.display = 'none';
+            document.getElementById('wrongNoteDisplay').style.display = 'none';
+            // Reset progress bar
+            document.getElementById('progressBar').style.width = '0%';
         }
 
         function endGame() {
@@ -1467,6 +1446,7 @@
         }
 
         function handleCorrectAnswer() {
+            clearWrongNoteDisplay(); // ADD THIS LINE
             gameState.score++;
             gameState.consecutiveMisses = 0;
             
@@ -1489,9 +1469,6 @@
                 gameState.areaStats[currentNote.noteData.area].total++;
             }
             
-            if (gameState.score % 8 === 0 && gameState.composersCollected.length < 10) {
-                unlockComposer();
-            }
 
             if (gameState.score >= TARGET_SCORE) {
                 winGame();
@@ -1502,9 +1479,14 @@
             console.log('Correct! Score:', gameState.score);
         }
 
-        function handleWrongAnswer() {
+        function handleWrongAnswer(pressedNote = null, expectedNote = null) {
             gameState.consecutiveMisses++;
             gameState.totalMisses++;
+            
+            // Show wrong note display if notes are provided
+            if (pressedNote && expectedNote) {
+                showWrongNote(pressedNote, expectedNote);
+            }
             
             // Track area performance for wrong answers
             let currentNote = null;
@@ -1540,13 +1522,6 @@
             console.log('Wrong! Consecutive misses:', gameState.consecutiveMisses);
         }
 
-        function playPianoKey(pressedNote) {
-            if (gameState.gameMode === 'moving') {
-                handleMovingNoteGuess(pressedNote);
-            } else {
-                handleStillNoteGuess(pressedNote);
-            }
-        }
 
         function handleMovingNoteGuess(pressedNote) {
             if (!gameState.activeNotes || gameState.activeNotes.length === 0) return;
@@ -1582,7 +1557,7 @@
             } else {
                 targetNote.querySelector('.note-head').classList.add('incorrect');
                 targetNote.noteData.guessed = true;
-                handleWrongAnswer();
+                handleWrongAnswer(pressedNote, expectedNotes[0]); // Pass the notes
             }
         }
 
@@ -1620,23 +1595,30 @@
                     nextNote.style.borderRadius = '50%';
                 } else {
                     // All notes completed, create new set
-                    setTimeout(() => createStillNotes(), 1000);
+                    setTimeout(() => {
+                        if (gameState.isPlaying) createStillNotes();
+                    }, 1000);
                 }
             } else {
                 currentNote.querySelector('.note-head').classList.add('incorrect');
                 currentNote.noteData.guessed = true;
                 currentNote.style.border = 'none';
-                handleWrongAnswer();
+                handleWrongAnswer(pressedNote, expectedNotes[0]); // Pass the notes
                 
-                // Move to next note even after wrong answer
-                gameState.currentStillNoteIndex++;
-                if (gameState.currentStillNoteIndex < gameState.stillNotes.length) {
-                    const nextNote = gameState.stillNotes[gameState.currentStillNoteIndex];
-                    nextNote.style.border = '2px solid blue';
-                    nextNote.style.borderRadius = '50%';
-                } else {
-                    // All notes completed, create new set
-                    setTimeout(() => createStillNotes(), 1000);
+                // Only continue if game is still playing
+                if (gameState.isPlaying) {
+                    // Move to next note even after wrong answer
+                    gameState.currentStillNoteIndex++;
+                    if (gameState.currentStillNoteIndex < gameState.stillNotes.length) {
+                        const nextNote = gameState.stillNotes[gameState.currentStillNoteIndex];
+                        nextNote.style.border = '2px solid blue';
+                        nextNote.style.borderRadius = '50%';
+                    } else {
+                        // All notes completed, create new set
+                        setTimeout(() => {
+                            if (gameState.isPlaying) createStillNotes();
+                        }, 1000);
+                    }
                 }
             }
         }
@@ -1838,7 +1820,6 @@
                 difficulty: document.getElementById('difficultySelect').value,
                 gameMode: document.getElementById('gameMode').value,
                 isPlaying: true,
-                composersCollected: [],
                 waitingForAnswer: false,
                 noteStartTime: 0,
                 activeNotes: [],
@@ -1865,6 +1846,8 @@
 
             // Update key signature display with the actual scale
             displayKeySignature(gameState.selectedScale);
+            updateScaleDisplay();
+            document.getElementById('scaleDisplay').style.display = 'block';
 
 
             document.getElementById('gameStartOverlay').style.display = 'none';
@@ -1890,8 +1873,36 @@
             document.getElementById('score').textContent = gameState.score;
             document.getElementById('targetScore').textContent = TARGET_SCORE;
             document.getElementById('lives').textContent = gameState.consecutiveMisses;
-            document.getElementById('composersCount').textContent = gameState.composersCollected.length;
+            
+            // Update progress bar
+            const progressPercentage = (gameState.score / TARGET_SCORE) * 100;
+            document.getElementById('progressBar').style.width = progressPercentage + '%';
         }
+
+        function updateScaleDisplay() {
+            const scaleNames = {
+                'C': 'C Major', 'G': 'G Major', 'D': 'D Major', 'A': 'A Major', 'E': 'E Major',
+                'F': 'F Major', 'Bb': 'Bb Major', 'Am': 'A Minor', 'Em': 'E Minor', 
+                'Bm': 'B Minor', 'Dm': 'D Minor', 'Gm': 'G Minor', 'Cm': 'C Minor'
+            };
+            
+            const displayName = scaleNames[gameState.selectedScale] || gameState.selectedScale;
+            document.getElementById('scaleDisplay').textContent = `Scale: ${displayName}`;
+        }
+
+        function showWrongNote(pressedNote, correctNote) {
+            document.getElementById('scaleDisplay').style.display = 'none';
+            document.getElementById('wrongNoteDisplay').style.display = 'flex';
+            document.getElementById('wrongNote').textContent = pressedNote;
+            document.getElementById('correctNote').textContent = correctNote;
+        }
+
+        function clearWrongNoteDisplay() {
+            document.getElementById('wrongNoteDisplay').style.display = 'none';
+        }
+
+
+
 
         function displayKeySignature(selectedScale) {
             // Clear existing accidentals
