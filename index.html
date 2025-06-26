@@ -6,6 +6,8 @@
 
 
     <title>Test app name replace</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="im4.png">
+
     <!-- Add Tone.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 
@@ -17,6 +19,30 @@
             background-color: #f4f1e8;
             user-select: none;
         }
+
+        /* Welcome Screen */
+        .welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('im6.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .welcome-content {
+            text-align: center;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
 
         .game-container {
             max-width: 400px;
@@ -62,6 +88,8 @@
             border: 1px solid #ccc;
             width: 120px; /* Fixed width for all dropdowns */
             box-sizing: border-box;
+            color: black;
+            background: #f9f7f3;
         }
 
         select:disabled {
@@ -178,7 +206,7 @@
 
         .treble-clef {
             top: calc(14 * (100% / 49));
-            transform: translateY(-45%);
+            transform: translateY(-50%);
             font-size: 70px;
         }
 
@@ -503,15 +531,15 @@
             margin-top: 15px;
             padding: 12px 24px;
             font-size: 20px;
-            background: #e6dfca
-            color: black;
-            border: none;
+            background: #f4f2ec;
+            color: rgb(69, 66, 61);
+            border: 2px solid #010101da;
             border-radius: 6px;
             cursor: pointer;
         }
 
         .start-game-btn:hover {
-            background: #e6dfca
+            background: #f2e9cc;
         }
 
         /* Game Over */
@@ -608,7 +636,14 @@
         }
     </style>
 </head>
+
 <body>
+    <div class="welcome-screen" id="welcomeScreen">
+        <div class="welcome-content">
+            <!-- Content will go here later -->
+        </div>
+    </div>
+    
     <div class="game-container">
         <!-- Header with Score and Settings -->
         <div class="header">
@@ -625,18 +660,19 @@
             <div class="scale-selector">
                 <select id="scale">
                     <option value="C">C Major</option>
-                    <option value="G">G Major</option>
                     <option value="D">D Major</option>
-                    <option value="A">A Major</option>
                     <option value="E">E Major</option>
                     <option value="F">F Major</option>
-                    <option value="Bb">Bb Major</option>
-                    <option value="Am">A Minor</option>
-                    <option value="Em">E Minor</option>
-                    <option value="Bm">B Minor</option>
-                    <option value="Dm">D Minor</option>
-                    <option value="Gm">G Minor</option>
+                    <option value="G">G Major</option>
+                    <option value="A">A Major</option>
+                    <option value="B">B Major</option>
                     <option value="Cm">C Minor</option>
+                    <option value="Dm">D Minor</option>
+                    <option value="Em">E Minor</option>
+                    <option value="Fm">F Minor</option>
+                    <option value="Gm">G Minor</option>
+                    <option value="Am">A Minor</option>
+                    <option value="Bm">B Minor</option>
                     <option value="random">Random</option>
                 </select>
                 
@@ -818,20 +854,21 @@
             'A': ['A', 'B', 'C#', 'D', 'E', 'F#', 'G#'],
             'E': ['E', 'F#', 'G#', 'A', 'B', 'C#', 'D#'],
             'F': ['F', 'G', 'A', 'Bb', 'C', 'D', 'E'],
-            'Bb': ['Bb', 'C', 'D', 'Eb', 'F', 'G', 'A'],
+            'B': ['B', 'C#', 'D#', 'E', 'F#', 'G#', 'A#'],
             'Am': ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
             'Em': ['E', 'F#', 'G', 'A', 'B', 'C', 'D'],
             'Bm': ['B', 'C#', 'D', 'E', 'F#', 'G', 'A'],
             'Dm': ['D', 'E', 'F', 'G', 'A', 'Bb', 'C'],
             'Gm': ['G', 'A', 'Bb', 'C', 'D', 'Eb', 'F'],
-            'Cm': ['C', 'D', 'Eb', 'F', 'G', 'Ab', 'Bb']
+            'Cm': ['C', 'D', 'Eb', 'F', 'G', 'Ab', 'Bb'],
+            'Fm': ['F', 'G', 'Ab', 'Bb', 'C', 'Db', 'Eb']
         };
 
         // Scale definitions and accidental positions
         const SCALE_DEFINITIONS = {
             'C': [], 'G': ['F#'], 'D': ['F#', 'C#'], 'A': ['F#', 'C#', 'G#'], 'E': ['F#', 'C#', 'G#', 'D#'],
-            'F': ['Bb'], 'Bb': ['Bb', 'Eb'], 'Am': [], 'Em': ['F#'], 'Bm': ['F#', 'C#'],
-            'Dm': ['Bb'], 'Gm': ['Bb', 'Eb'], 'Cm': ['Bb', 'Eb', 'Ab']
+            'F': ['Bb'], 'B': ['C#', 'F#'], 'Am': [], 'Em': ['F#'], 'Bm': ['F#', 'C#'],
+            'Dm': ['Bb'], 'Gm': ['Bb', 'Eb'], 'Cm': ['Bb', 'Eb', 'Ab'], 'Fm': ['Bb', 'Eb', 'Ab','Db']
         };
 
         const ACCIDENTAL_POSITIONS = {
@@ -913,6 +950,13 @@
             legendary: { noteSpeed: 8000, noteCount: 11 },
             impossible: { noteSpeed: 8000, noteCount: 14 }
         };
+
+        function hideWelcomeScreen() {
+            document.getElementById('welcomeScreen').style.display = 'none';
+        }
+
+        // Auto-hide after 3 seconds, or add click to dismiss
+        setTimeout(hideWelcomeScreen, 3000);
 
         // Initialize the game
         function initGame() {
@@ -1894,7 +1938,7 @@
         function updateScaleDisplay() {
             const scaleNames = {
                 'C': 'C Major', 'G': 'G Major', 'D': 'D Major', 'A': 'A Major', 'E': 'E Major',
-                'F': 'F Major', 'Bb': 'Bb Major', 'Am': 'A Minor', 'Em': 'E Minor', 
+                'F': 'F Major', 'B': 'B Major', 'Am': 'A Minor', 'Em': 'E Minor', 
                 'Bm': 'B Minor', 'Dm': 'D Minor', 'Gm': 'G Minor', 'Cm': 'C Minor'
             };
             
