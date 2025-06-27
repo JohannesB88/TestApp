@@ -69,7 +69,7 @@
             justify-content: center;
             align-items: center;
             margin-bottom: 10px;
-            font-size: 14px;
+            font-size: 20px;
             position: relative;
         }
 
@@ -221,14 +221,21 @@
         }
 
         .treble-clef {
-            top: calc(14 * (100% / 49));
-            transform: translateY(-50%);
-            font-size: 70px;
+            position: absolute;
+            left: 15px;
+            font-size: 90px;
+            /* Position so 80% down the clef symbol aligns with staff line 8 (G line) */
+            top: calc(((9 - 1) / 24) * 100% - 0.7em);
+            transform: translateY(0);
         }
 
         .bass-clef {
-            top: calc(33 * (100% / 48));
-            transform: translateY(-53%);
+            position: absolute;
+            left: 20px;
+            font-size: 58px;
+            /* Position so 50% down the clef symbol aligns with staff line 18 (F line) */
+            top: calc(((17.5 - 1) / 24) * 100% - 0.52em);
+            transform: translateY(0);
         }
 
         .moving-note {
@@ -826,18 +833,20 @@
             
             // Treble staff (G clef) - positions 10-18
             'F5': 11,   'E5': 12,   'D5': 13,   'C5': 14,   'B4': 15,   'A4': 16,   'G4': 17,   'F4': 18,   'E4': 19,
-            
-            // Middle section - positions 19-27
-            'D4_treble': 20, 'E4_bass': 20,     'C4_treble': 21, 'D4_bass': 21,     'B3_treble': 22, 'C4_bass': 22,
-            'A3_treble': 23, 'B3_bass': 23,     'G3_treble': 24, 'A3_bass': 24,     'F3_treble': 25, 'G3_bass': 25,
-            'E3_treble': 26, 'F3_bass': 26,     'D3_treble': 27, 'E3_bass': 27,     'C3_treble': 28, 'D3_bass': 28,
-            'B2_treble': 29, 'C3_bass': 29,     'A2_treble': 30, 'B2_bass': 30,
+           
+            // Middle section - treble only, positions 20-25
+            'D4_treble': 20,     'C4_treble': 21,     'B3_treble': 22,
+            'A3_treble': 23,     'G3_treble': 24,     'F3_treble': 25, 
+
+            // Middle section - bass only, positions 25-30
+            'G4_bass': 25,       'F4_bass': 26,       'E4_bass': 27,       
+            'D4_bass': 28,       'C4_bass': 29,       'B3_bass': 30,
 
             // Bass staff (F clef) - positions 30-38
-            'A2': 31,   'G2': 32,   'F2': 33,   'E2': 34,   'D2': 35,   'C2': 36,   'B1': 37,   'A1': 38,   'G1': 39,
+            'A3': 31,   'G3': 32,   'F3': 33,   'E3': 34,   'D3': 35,   'C3': 36,   'B2': 37,   'A2': 38,   'G2': 39,
 
             // Below bass staff - positions 39-47
-            'F1': 40,   'E1': 41,   'D1': 42,   'C1': 43,   'B0': 44,   'A0': 45,   'G0': 46,   'F0': 47,   'E0': 48
+            'F2': 40,   'E2': 41,   'D2': 42,   'C2': 43,   'B1': 44,   'A1': 45,   'G1': 46,   'F1': 47,   'E1': 48
         };
 
         // Get vertical position for note on staff
@@ -994,10 +1003,10 @@
             
             // Bass support notes (F and C) - left column
             const bassNotes = [
-                {note: 'F', octave: 0}, {note: 'C', octave: 1},
-                {note: 'F', octave: 1}, {note: 'C', octave: 2}, 
-                {note: 'F', octave: 2}, {note: 'C', octave: 3},
-                {note: 'F', octave: 3}, {note: 'C', octave: 4}
+                {note: 'F', octave: 1}, {note: 'C', octave: 2},
+                {note: 'F', octave: 2}, {note: 'C', octave: 3}, 
+                {note: 'F', octave: 3}, {note: 'C', octave: 4},
+                {note: 'F', octave: 4}
             ];
             
             bassNotes.forEach(noteData => {
@@ -1014,7 +1023,7 @@
                 {note: 'G', octave: 6}, {note: 'C', octave: 6}, 
                 {note: 'G', octave: 5}, {note: 'C', octave: 5}, 
                 {note: 'G', octave: 4}, {note: 'C', octave: 4},
-                {note: 'G', octave: 3}, {note: 'C', octave: 3}
+                {note: 'G', octave: 3}, 
             ];
             
             trebleNotes.forEach(noteData => {
@@ -1386,6 +1395,11 @@
             // Position the note
             noteElement.style.top = getNotePosition(noteData.note, noteData.octave, noteData.hand || '');
             noteElement.style.transform = 'translateY(-50%)';
+            // Add ledger lines if needed
+            // const position = NOTE_POSITIONS[noteData.fullKey] || NOTE_POSITIONS[noteData.note + noteData.octave];
+            // const ledgerInfo = needsLedgerLines(position);
+            // addLedgerLines(noteElement, ledgerInfo);
+
             
             // Store note data
             noteElement.noteData = {
@@ -1424,6 +1438,41 @@
             
             return noteElement;
         }
+
+        function needsLedgerLines(notePosition) {
+            // Above treble staff (positions 1-5)
+            if (notePosition <= 5) return { type: 'above-treble', count: Math.ceil((6 - notePosition) / 2) };
+            
+            // Below treble staff, above bass staff (positions 20-30)
+            if (notePosition >= 20 && notePosition <= 30) return { type: 'middle', count: Math.ceil((notePosition - 19) / 2) };
+            
+            // Below bass staff (positions 40-48)
+            if (notePosition >= 40) return { type: 'below-bass', count: Math.ceil((notePosition - 39) / 2) };
+            
+            return null; // No ledger lines needed
+        }
+
+        function addLedgerLines(noteElement, ledgerInfo) {
+            if (!ledgerInfo) return;
+            
+            for (let i = 1; i <= ledgerInfo.count; i++) {
+                const ledgerLine = document.createElement('div');
+                ledgerLine.className = 'ledger-line';
+                ledgerLine.style.position = 'absolute';
+                ledgerLine.style.width = '30px';
+                ledgerLine.style.height = '1.5px';
+                ledgerLine.style.background = '#333';
+                ledgerLine.style.left = '-6px'; // Center on note
+                ledgerLine.style.top = `${i * 12}px`; // Spacing between lines
+                ledgerLine.style.zIndex = '5';
+                
+                noteElement.appendChild(ledgerLine);
+            }
+        }
+
+
+
+        
 
         function showNote() {
             if (!gameState.isPlaying || gameState.gameMode !== 'moving') return;
