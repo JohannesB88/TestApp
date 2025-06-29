@@ -113,6 +113,54 @@
             opacity: 0.6;
         }
 
+        .custom-select {
+            position: relative;
+            width: 120px;
+            font-size: 18px;
+        }
+
+        .select-selected {
+            background-color: #f9f7f3;
+            padding: 2px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            color: black;
+        }
+
+        .select-items {
+            position: absolute;
+            background-color: #f9f7f3;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 99;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+        }
+
+        .select-hide {
+            display: none;
+        }
+
+        .select-items div {
+            color: black;
+            padding: 2px 8px;
+            cursor: pointer;
+        }
+
+        .select-items div:hover {
+            background-color: rgba(0,0,0,0.1);
+        }
+
+        .select-items div.selected {
+            background-color: rgba(0,0,0,0.2);
+        }
+
+
+
+
         .end-game-btn {
             position: absolute;
             left: 0;
@@ -717,6 +765,18 @@
                     <option value="moving">Move</option>
                     <option value="still">Still</option>
                 </select>
+
+                <select id="regionSelect">
+                    <option value="all">All Regions</option>
+                    <option value="above">Above Treble</option>
+                    <option value="treble">Treble Clef</option>
+                    <option value="middle">Middle</option>
+                    <option value="bass">Bass Clef</option>
+                    <option value="below">Below Bass</option>
+                    <option value="above,below">Above + Below</option>
+                    <option value="treble,bass">Treble + Bass</option>
+                </select>
+
             </div>
 
             <!-- Staff Notation Area -->
@@ -823,7 +883,8 @@
             noteStartTime: 0,
             activeNotes: [],
             stillNotes: [],
-            currentStillNoteIndex: 0
+            currentStillNoteIndex: 0,
+            selectedRegions: ['above', 'treble', 'middle', 'bass', 'below']  
         };
 
         // Complete note position mapping
@@ -1181,6 +1242,16 @@
                 }
             });
 
+            document.getElementById('regionSelect').addEventListener('change', function() {
+                const value = this.value;
+                if (value === 'all') {
+                    gameState.selectedRegions = ['above', 'treble', 'middle', 'bass', 'below'];
+                } else {
+                    gameState.selectedRegions = value.split(',');
+                }
+                console.log('Selected regions:', gameState.selectedRegions);
+            });
+
             // Initialize key signature display
             displayKeySignature(gameState.selectedScale);
         }
@@ -1191,6 +1262,7 @@
             document.getElementById('gameOver').style.display = 'none';
             document.getElementById('endGameBtn').style.display = 'none';
             document.getElementById('gameMode').disabled = false;
+            document.getElementById('regionSelect').disabled = false; // ADD THIS LINE
             
             // Clear any existing notes
             const existingNotes = document.querySelectorAll('.moving-note');
@@ -1206,10 +1278,12 @@
             // Reset progress bar
             document.getElementById('progressBar').style.width = '0%';
 
+
             // Re-enable game configuration buttons
             document.getElementById('scale').disabled = false;
             document.getElementById('difficultySelect').disabled = false;
             document.getElementById('gameMode').disabled = false;
+            document.getElementById('regionSelect').disabled = false; // ADD THIS LINE
 
         }
 
@@ -1253,58 +1327,99 @@
 
 
         function generateNote() {
-            const staffSections = {
-                aboveBelow: 0.15,
-                between: 0.15,
-                treble: 0.35,
-                bass: 0.35
-            };
+            console.log('gameState.selectedRegions:', gameState.selectedRegions);
+            console.log('type of gameState.selectedRegions:', typeof gameState.selectedRegions);
+            console.log('is array?', Array.isArray(gameState.selectedRegions));
             
-            const random = Math.random();
-            let selectedSection;
-            
-            if (random < staffSections.aboveBelow) {
-                selectedSection = 'aboveBelow';
-            } else if (random < staffSections.aboveBelow + staffSections.between) {
-                selectedSection = 'between';
-            } else if (random < staffSections.aboveBelow + staffSections.between + staffSections.treble) {
-                selectedSection = 'treble';
-            } else {
-                selectedSection = 'bass';
-            }
-            
+            const allowedSections = gameState.selectedRegions;
+            console.log('allowedSections:', allowedSections);
+            console.log('type of allowedSections:', typeof allowedSections);
+            console.log('allowedSections === gameState.selectedRegions?', allowedSections === gameState.selectedRegions);
+                    
             let availableNotes = [];
-            const allNoteKeys = Object.keys(NOTE_POSITIONS);
+            let selectedSection = '';
             
-            switch (selectedSection) {
-                case 'aboveBelow':
-                    availableNotes = allNoteKeys.filter(key => {
-                        const position = NOTE_POSITIONS[key];
-                        return position <= 10 || position >= 40;
-                    });
-                    break;
-                case 'between':
-                    availableNotes = allNoteKeys.filter(key => {
-                        const position = NOTE_POSITIONS[key];
-                        return position >= 20 && position <= 30;
-                    });
-                    break;
-                case 'treble':
-                    availableNotes = allNoteKeys.filter(key => {
-                        const position = NOTE_POSITIONS[key];
-                        return position >= 11 && position <= 19;
-                    });
-                    break;
-                case 'bass':
-                    availableNotes = allNoteKeys.filter(key => {
-                        const position = NOTE_POSITIONS[key];
-                        return position >= 31 && position <= 39;
-                    });
-                    break;
+            // If all regions are selected, use original weighted random selection
+            if (allowedSections.length === 5) {
+                const staffSections = {
+                    aboveBelow: 0.15,
+                    between: 0.15,
+                    treble: 0.35,
+                    bass: 0.35
+                };
+
+                console.log('all areas')
+                
+                const random = Math.random();
+                
+                if (random < staffSections.aboveBelow) {
+                    selectedSection = 'aboveBelow';
+                } else if (random < staffSections.aboveBelow + staffSections.between) {
+                    selectedSection = 'between';
+                } else if (random < staffSections.aboveBelow + staffSections.between + staffSections.treble) {
+                    selectedSection = 'treble';
+                } else {
+                    selectedSection = 'bass';
+                }
+                
+                const allNoteKeys = Object.keys(NOTE_POSITIONS);
+                
+                switch (selectedSection) {
+                    case 'aboveBelow':
+                        availableNotes = allNoteKeys.filter(key => {
+                            const position = NOTE_POSITIONS[key];
+                            return position <= 10 || position >= 40;
+                        });
+                        break;
+                    case 'between':
+                        availableNotes = allNoteKeys.filter(key => {
+                            const position = NOTE_POSITIONS[key];
+                            return position >= 20 && position <= 30;
+                        });
+                        break;
+                    case 'treble':
+                        availableNotes = allNoteKeys.filter(key => {
+                            const position = NOTE_POSITIONS[key];
+                            return position >= 11 && position <= 19;
+                        });
+                        break;
+                    case 'bass':
+                        availableNotes = allNoteKeys.filter(key => {
+                            const position = NOTE_POSITIONS[key];
+                            return position >= 31 && position <= 39;
+                        });
+                        break;
+                }
+            } else {
+                console.log('limited areas')
+                // Filter notes based on selected regions only
+                const allNoteKeys = Object.keys(NOTE_POSITIONS);
+                
+                allNoteKeys.forEach(key => {
+                    const position = NOTE_POSITIONS[key];
+                    if ((allowedSections.includes('above') && position <= 10) ||
+                        (allowedSections.includes('treble') && position >= 11 && position <= 19) ||
+                        (allowedSections.includes('middle') && position >= 20 && position <= 30) ||
+                        (allowedSections.includes('bass') && position >= 31 && position <= 39) ||
+                        (allowedSections.includes('below') && position >= 40)) {
+                        availableNotes.push(key);
+                    }
+                });
+                
+                // Set selectedSection based on what's actually selected (for area tracking)
+                if (allowedSections.includes('treble')) {
+                    selectedSection = 'treble';
+                } else if (allowedSections.includes('bass')) {
+                    selectedSection = 'bass';
+                } else if (allowedSections.includes('middle')) {
+                    selectedSection = 'between';
+                } else {
+                    selectedSection = 'aboveBelow';
+                }
             }
             
             if (availableNotes.length === 0) {
-                availableNotes = allNoteKeys;
+                availableNotes = Object.keys(NOTE_POSITIONS);
             }
             
             const randomKey = availableNotes[Math.floor(Math.random() * availableNotes.length)];
@@ -1350,7 +1465,7 @@
                 hand: hand,
                 fullKey: randomKey,
                 accidental: accidental,
-                area: selectedSection  // Add this line
+                area: selectedSection
             };
         }
 
@@ -1396,9 +1511,8 @@
             noteElement.style.top = getNotePosition(noteData.note, noteData.octave, noteData.hand || '');
             noteElement.style.transform = 'translateY(-50%)';
             // Add ledger lines if needed
-            // const position = NOTE_POSITIONS[noteData.fullKey] || NOTE_POSITIONS[noteData.note + noteData.octave];
-            // const ledgerInfo = needsLedgerLines(position);
-            // addLedgerLines(noteElement, ledgerInfo);
+            const ledgerInfo = needsLedgerLines(position);
+            addLedgerLines(noteElement, ledgerInfo);
 
             
             // Store note data
@@ -1441,38 +1555,102 @@
 
         function needsLedgerLines(notePosition) {
             // Above treble staff (positions 1-5)
-            if (notePosition <= 5) return { type: 'above-treble', count: Math.ceil((6 - notePosition) / 2) };
+            if (notePosition <= 10) return { type: 'above-treble', notePosition: notePosition };
             
-            // Below treble staff, above bass staff (positions 20-30)
-            if (notePosition >= 20 && notePosition <= 30) return { type: 'middle', count: Math.ceil((notePosition - 19) / 2) };
+            // Below treble staff, above bass staff (positions 20-30) 
+            if (notePosition >= 20 && notePosition <= 30) return { type: 'middle', notePosition: notePosition };
             
             // Below bass staff (positions 40-48)
-            if (notePosition >= 40) return { type: 'below-bass', count: Math.ceil((notePosition - 39) / 2) };
+            if (notePosition >= 40) return { type: 'below-bass', notePosition: notePosition };
             
-            return null; // No ledger lines needed
+            return null;
         }
 
         function addLedgerLines(noteElement, ledgerInfo) {
             if (!ledgerInfo) return;
             
-            for (let i = 1; i <= ledgerInfo.count; i++) {
-                const ledgerLine = document.createElement('div');
-                ledgerLine.className = 'ledger-line';
-                ledgerLine.style.position = 'absolute';
-                ledgerLine.style.width = '30px';
-                ledgerLine.style.height = '1.5px';
-                ledgerLine.style.background = '#333';
-                ledgerLine.style.left = '-6px'; // Center on note
-                ledgerLine.style.top = `${i * 12}px`; // Spacing between lines
-                ledgerLine.style.zIndex = '5';
-                
-                noteElement.appendChild(ledgerLine);
+            const notePosition = ledgerInfo.notePosition;
+            
+            // Check stem direction
+            const stem = noteElement.querySelector('.note-stem');
+            const isStemDown = stem.classList.contains('stem-down');
+            
+
+            
+            // Calculate which LINE positions need ledger lines
+            let ledgerLinePositions = [];
+            
+            if (ledgerInfo.type === 'above-treble') {
+                // For notes above treble staff (positions 1-10)
+                if (notePosition % 2 === 1) {
+                    for (let pos = notePosition; pos <= 9; pos += 2) {
+                        ledgerLinePositions.push(pos);
+                    }
+                } else {
+                    for (let pos = notePosition + 1; pos <= 9; pos += 2) {
+                        ledgerLinePositions.push(pos);
+                    }
+                }
+            } else if (ledgerInfo.type === 'below-bass') {
+                // For notes below bass staff (positions 40+)
+                if (notePosition % 2 === 1) {
+                    for (let pos = 41; pos <= notePosition; pos += 2) {
+                        ledgerLinePositions.push(pos);
+                    }
+                } else {
+                    for (let pos = 41; pos <= notePosition - 1; pos += 2) {
+                        ledgerLinePositions.push(pos);
+                    }
+                }
+            } else if (ledgerInfo.type === 'middle') {
+                // Use stem direction to determine treble vs bass
+                if (isStemDown) {
+                    // Stem down = middle-bass, connect down to bass staff
+                    if (notePosition % 2 === 1) {
+                        for (let pos = notePosition; pos <= 29; pos += 2) {
+                            ledgerLinePositions.push(pos);
+                        }
+                    } else {
+                        for (let pos = notePosition + 1; pos <= 29; pos += 2) {
+                            ledgerLinePositions.push(pos);
+                        }
+                    }
+                } else {
+                    // Stem up = middle-treble, connect up to treble staff
+                    if (notePosition % 2 === 1) {
+                        for (let pos = notePosition; pos >= 21; pos -= 2) {
+                            ledgerLinePositions.push(pos);
+                        }
+                    } else {
+                        for (let pos = notePosition - 1; pos >= 21; pos -= 2) {
+                            ledgerLinePositions.push(pos);
+                        }
+                    }
+                }
             }
+            
+            // Draw all ledger lines
+            const staffHeight = 280;
+            const pixelsPerPosition = staffHeight / 48;
+            
+            ledgerLinePositions.forEach(pos => {
+                const offsetPositions = pos - notePosition;
+                const offsetPixels = offsetPositions * pixelsPerPosition;
+                
+                const ledgerLine = document.createElement('div');
+                ledgerLine.style.position = 'absolute';
+                ledgerLine.style.width = '24px';
+                ledgerLine.style.height = '2px';
+                ledgerLine.style.background = '#333';
+                ledgerLine.style.left = '-4px';
+                ledgerLine.style.top = `calc(50% + ${offsetPixels}px)`;
+                ledgerLine.style.transform = 'translateY(-50%)';
+                ledgerLine.style.zIndex = '8';
+                noteElement.appendChild(ledgerLine);
+            });
+            
+            console.log('Note at position:', notePosition, 'Type:', ledgerInfo.type, 'Stem down:', isStemDown, 'Ledger line positions:', ledgerLinePositions);
         }
-
-
-
-        
 
         function showNote() {
             if (!gameState.isPlaying || gameState.gameMode !== 'moving') return;
@@ -1929,6 +2107,9 @@
             document.getElementById('endGameBtn').style.display = 'inline-block';
             document.getElementById('gameMode').disabled = true;
 
+            // Store the current selectedRegions before resetting
+            const currentSelectedRegions = gameState.selectedRegions || ['above', 'treble', 'middle', 'bass', 'below'];
+
             gameState = {
                 score: 0,
                 consecutiveMisses: 0,
@@ -1937,6 +2118,7 @@
                 selectedScale: document.getElementById('scale').value,
                 difficulty: document.getElementById('difficultySelect').value,
                 gameMode: document.getElementById('gameMode').value,
+                selectedRegions: currentSelectedRegions, // ADD THIS LINE
                 isPlaying: true,
                 waitingForAnswer: false,
                 noteStartTime: 0,
@@ -1959,6 +2141,7 @@
             document.getElementById('scale').disabled = true;
             document.getElementById('difficultySelect').disabled = true;
             document.getElementById('gameMode').disabled = true;
+            document.getElementById('regionSelect').disabled = true; // ADD THIS LINE
 
 
             // Handle random scale selection
