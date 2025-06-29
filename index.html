@@ -270,20 +270,16 @@
 
         .treble-clef {
             position: absolute;
-            left: 15px;
-            font-size: 90px;
-            /* Position so 80% down the clef symbol aligns with staff line 8 (G line) */
-            top: calc(((9 - 1) / 24) * 100% - 0.7em);
-            transform: translateY(0);
+            left: 20px;
+            color: #333;
+            line-height: 1;
         }
 
         .bass-clef {
             position: absolute;
             left: 20px;
-            font-size: 58px;
-            /* Position so 50% down the clef symbol aligns with staff line 18 (F line) */
-            top: calc(((17.5 - 1) / 24) * 100% - 0.52em);
-            transform: translateY(0);
+            color: #333;
+            line-height: 1;
         }
 
         .moving-note {
@@ -1052,9 +1048,59 @@
             createPianoKeys();
             updateDisplay();
             setupEventListeners();
+            scaleClefSymbols(); // ADD THIS LINE
             showStartScreen();
             console.log('Piano Learning Game initialized!');
         }
+
+        // Add this after initGame() function
+        window.addEventListener('resize', () => {
+            setTimeout(scaleClefSymbols, 100); // Small delay to let layout settle
+        });
+
+        function calculateStaffSpacing() {
+            const staffArea = document.querySelector('.staff-area');
+            const staffHeight = staffArea.offsetHeight; // Actual height in pixels
+            const pixelsPerPosition = staffHeight / 48; // Pixels per note position
+            const pixelsBetweenLines = pixelsPerPosition * 2; // Distance between adjacent staff lines
+            
+            return {
+                staffHeight: staffHeight,
+                pixelsPerPosition: pixelsPerPosition,
+                pixelsBetweenLines: pixelsBetweenLines
+            };
+        }
+
+        function scaleClefSymbols() {
+            const spacing = calculateStaffSpacing();
+
+            // Position treble clef with TOP at red line (position 9)
+            const trebleClef = document.querySelector('.treble-clef');
+            const trebleSpan = 5.5; // INCREASE from 4 to 8 line spaces
+            const trebleHeight = spacing.pixelsBetweenLines * trebleSpan;
+
+            trebleClef.style.fontSize = trebleHeight + 'px';
+            trebleClef.style.top = `calc(${(9 - 1) * (102 / 48)}%)`;
+            trebleClef.style.transform = 'translateY(0)';
+            trebleClef.style.lineHeight = '1';
+
+            // Position bass clef with TOP at blue line (position 28)
+            const bassClef = document.querySelector('.bass-clef');
+            const bassSpan = 5; // INCREASE from 4 to 6 line spaces
+            const bassHeight = spacing.pixelsBetweenLines * bassSpan;
+
+            bassClef.style.fontSize = bassHeight + 'px';
+            bassClef.style.top = `calc(${(29 - 1) * (100 / 48)}%)`;
+            bassClef.style.transform = 'translateY(0)';
+            bassClef.style.lineHeight = '1';
+
+            console.log('Clef symbols positioned with tops at test lines');
+            console.log('Treble span:', trebleSpan, 'height:', trebleHeight + 'px');
+            console.log('Bass span:', bassSpan, 'height:', bassHeight + 'px');
+        }
+
+
+
 
         // Add support notes function:
         // Add support notes function:
