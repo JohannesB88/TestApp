@@ -158,8 +158,17 @@
             background-color: rgba(0,0,0,0.2);
         }
 
+        .game-controls {
+            background: rgb(255, 253, 249);
+            border: 1px solid #cfcfcf;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 15px;  
+        }
 
-
+        .scale-selector {
+            margin-bottom: 0; /* Remove existing margin */
+        }
 
         .end-game-btn {
             position: absolute;
@@ -716,51 +725,54 @@
 
         <div class="main-content">
             <!-- Scale Selection -->
-            <div class="scale-selector">
-                <select id="scale">
-                    <option value="C">C Major</option>
-                    <option value="D">D Major</option>
-                    <option value="E">E Major</option>
-                    <option value="F">F Major</option>
-                    <option value="G">G Major</option>
-                    <option value="A">A Major</option>
-                    <option value="B">B Major</option>
-                    <option value="Cm">C Minor</option>
-                    <option value="Dm">D Minor</option>
-                    <option value="Em">E Minor</option>
-                    <option value="Fm">F Minor</option>
-                    <option value="Gm">G Minor</option>
-                    <option value="Am">A Minor</option>
-                    <option value="Bm">B Minor</option>
-                    <option value="random">Random</option>
-                </select>
-                
-                <select id="difficultySelect">
-                    <option value="beginner">Beginner</option>
-                    <option value="novice">Novice</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                    <option value="expert">Expert</option>
-                    <option value="master">Master</option>
-                    <option value="legendary">Legendary</option>
-                    <option value="impossible">Impossible</option>
-                </select>
-
-                <select id="gameMode">
-                    <option value="moving">Move</option>
-                    <option value="still">Still</option>
-                </select>
-
-                <select id="regionSelect">
-                    <option value="all">All Regions</option>
-                    <option value="above">Above Treble</option>
-                    <option value="treble">Treble Clef</option>
-                    <option value="middle">Middle</option>
-                    <option value="bass">Bass Clef</option>
-                    <option value="below">Below Bass</option>
-                    <option value="above,below">Above + Below</option>
-                    <option value="treble,bass">Treble + Bass</option>
-                </select>
+            <div class="game-controls">
+    
+                <div class="scale-selector">
+                    <select id="scale">
+                        <option value="C">C Major</option>
+                        <option value="D">D Major</option>
+                        <option value="E">E Major</option>
+                        <option value="F">F Major</option>
+                        <option value="G">G Major</option>
+                        <option value="A">A Major</option>
+                        <option value="B">B Major</option>
+                        <option value="Cm">C Minor</option>
+                        <option value="Dm">D Minor</option>
+                        <option value="Em">E Minor</option>
+                        <option value="Fm">F Minor</option>
+                        <option value="Gm">G Minor</option>
+                        <option value="Am">A Minor</option>
+                        <option value="Bm">B Minor</option>
+                        <option value="random">Random</option>
+                    </select>
+                    
+                    <select id="difficultySelect">
+                        <option value="beginner">Beginner</option>
+                        <option value="novice">Novice</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                        <option value="expert">Expert</option>
+                        <option value="master">Master</option>
+                        <option value="legendary">Legendary</option>
+                        <option value="impossible">Impossible</option>
+                    </select>
+    
+                    <select id="gameMode">
+                        <option value="moving">Move</option>
+                        <option value="still">Still</option>
+                    </select>
+    
+                    <select id="regionSelect">
+                        <option value="all">All Regions</option>
+                        <option value="above">Above Treble</option>
+                        <option value="treble">Treble Clef</option>
+                        <option value="middle">Middle</option>
+                        <option value="bass">Bass Clef</option>
+                        <option value="below">Below Bass</option>
+                        <option value="above,below">Above + Below</option>
+                        <option value="treble,bass">Treble + Bass</option>
+                    </select>
+                </div>
 
             </div>
 
