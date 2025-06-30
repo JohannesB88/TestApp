@@ -1078,12 +1078,12 @@
 
             // Position bass clef with TOP at position 29
             const bassClef = document.querySelector('.bass-clef');
-            const bassSpan = 3; // Line spaces to span
+            const bassSpan = 4; // Line spaces to span
             const bassHeight = spacing.pixelsBetweenLines * bassSpan;
 
             bassClef.style.width = bassHeight + 'px';
             bassClef.style.height = bassHeight + 'px'; // 1:1 ratio for bass clef
-            bassClef.style.top = `calc(${(31- 1) * (100 / 48)}%)`;
+            bassClef.style.top = `calc(${(30- 1) * (100 / 48)}%)`;
             bassClef.style.transform = 'translateY(0)';
 
             
