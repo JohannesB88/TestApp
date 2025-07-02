@@ -6,9 +6,9 @@
 
 
     <title>Test app name replace</title>
-    <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="logo.png">
-    <link rel="icon" sizes="192x192" href="logo.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="logo7.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="logo7.png">
+    <link rel="icon" sizes="192x192" href="logo7.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="NoteNow">
 
@@ -712,7 +712,7 @@
 <body>
     <div class="welcome-screen" id="welcomeScreen">
         <div class="welcome-content">
-            <img src="logo.png" alt="NoteNow Logo" class="welcome-logo">
+            <img src="logo5.png" alt="NoteNow Logo" class="welcome-logo">
             <h1 style="margin: 0; font-size: 28px; font-weight: bold;"></h1>
         </div>
     </div>
@@ -766,6 +766,11 @@
                     <select id="gameMode">
                         <option value="moving">Move</option>
                         <option value="still">Still</option>
+                    </select>
+
+                    <select id="noteMode">
+                        <option value="random">Random Notes</option>
+                        <option value="scales">Scales</option>
                     </select>
 
                     <select id="regionSelect">
@@ -862,6 +867,11 @@
             </div>
         </div>
 
+        <div id="currentScaleDisplay" style="position: relative; left: 10px; margin-top: 5px; font-size: 16px; color: #666; display: none;">
+            
+        </div>
+
+
 
         <!-- Game Over Screen -->
         <div class="game-over" id="gameOver">
@@ -885,6 +895,13 @@
             selectedScale: 'C',
             difficulty: 'beginner',
             gameMode: 'moving',
+            noteMode: 'random',
+            currentScale: {
+                notes: [],
+                currentIndex: 0,
+                clef: null,
+                scaleName: null
+            },
             isPlaying: false,
             waitingForAnswer: false,
             noteStartTime: 0,
@@ -1307,8 +1324,29 @@
                 console.log('Selected regions:', gameState.selectedRegions);
             });
 
+            document.getElementById('noteMode').addEventListener('change', function() {
+                if (gameState.isPlaying) {
+                    // Revert to previous value if game is running
+                    this.value = gameState.noteMode;
+                    return;
+                }
+                
+                gameState.noteMode = this.value;
+                const regionSelect = document.getElementById('regionSelect');
+                
+                if (this.value === 'scales') {
+                    regionSelect.disabled = true;
+                    regionSelect.style.opacity = '0.5';
+                } else {
+                    regionSelect.disabled = false;
+                    regionSelect.style.opacity = '1';
+                }
+            });
+
             // Initialize key signature display
             displayKeySignature(gameState.selectedScale);
+
+
         }
 
         function showStartScreen() {
@@ -1318,6 +1356,8 @@
             document.getElementById('endGameBtn').style.display = 'none';
             document.getElementById('gameMode').disabled = false;
             document.getElementById('regionSelect').disabled = false; // ADD THIS LINE
+            document.getElementById('noteMode').disabled = false;
+            document.getElementById('currentScaleDisplay').style.display = 'none';
             
             // Clear any existing notes
             const existingNotes = document.querySelectorAll('.moving-note');
@@ -1524,6 +1564,198 @@
             };
         }
 
+
+        function generateScaleNote() {
+            console.log('generateScaleNote() called - noteMode is:', gameState.noteMode);
+            
+            // Initialize scale state if not exists
+            if (!gameState.currentScale) {
+                gameState.currentScale = {
+                    notes: [],
+                    currentIndex: 0,
+                    clef: null,
+                    scaleName: null
+                };
+            }
+            
+            // If we need a new scale (first time or finished previous scale)
+            if (gameState.currentScale.notes.length === 0 || 
+                gameState.currentScale.currentIndex >= gameState.currentScale.notes.length) {
+                
+                // 50/50 treble or bass
+                const clef = Math.random() < 0.5 ? 'treble' : 'bass';
+                
+                // Get random scale
+                const scaleKeys = Object.keys(SCALES);
+                const randomScale = scaleKeys[Math.floor(Math.random() * scaleKeys.length)];
+                const scaleNotes = SCALES[randomScale];
+                
+                // Get the root note (first note of the scale)
+                const rootNoteLetter = scaleNotes[0].charAt(0);
+                
+                console.log('Creating new scale:', randomScale, 'in', clef, 'clef');
+                console.log('Root note:', rootNoteLetter);
+                console.log('Scale notes:', scaleNotes);
+                
+                // Find all possible starting positions for this root note in the selected clef
+                const possibleStartingNotes = Object.keys(NOTE_POSITIONS).filter(key => {
+                    const pos = NOTE_POSITIONS[key];
+                    const match = key.match(/([A-G])(\d+)(_treble|_bass)?/);
+                    
+                    if (!match) return false;
+                    
+                    const noteLetter = match[1];
+                    
+                    if (clef === 'treble') {
+                        // Treble clef: positions 2-25, exclude _bass notes
+                        // Maximum starting point should allow 7 notes to fit
+                        return noteLetter === rootNoteLetter && pos >= 9 && pos <= 25 && !key.includes('_bass');
+                    } else {
+                        // Bass clef: E1 (pos 48) up to A3 (pos 31) maximum starting points
+                        return noteLetter === rootNoteLetter && pos >= 31 && pos <= 48 && !key.includes('_treble');
+                    }
+                });
+                
+                console.log('Possible starting notes for', rootNoteLetter, 'in', clef, ':', possibleStartingNotes);
+                
+                if (possibleStartingNotes.length === 0) {
+                    console.log('No valid starting notes found, using random note');
+                    return generateNote();
+                }
+                
+                // Try each possible starting note to see if we can build a complete 7-note scale
+                let validSequence = null;
+                
+                for (const startingNote of possibleStartingNotes) {
+                    const match = startingNote.match(/([A-G])(\d+)(_treble|_bass)?/);
+                    if (!match) continue;
+                    
+                    const startOctave = parseInt(match[2]);
+                    const startHand = match[3] || '';
+                    
+                    console.log('Trying to build scale starting at:', startingNote);
+                    
+                    const sequence = [];
+                    let currentOctave = startOctave;
+                    let allNotesValid = true;
+                    
+                    for (let i = 0; i < 7; i++) {
+                        const currentScaleNote = scaleNotes[i]; // Full note with potential accidental
+                        const currentNoteLetter = currentScaleNote.charAt(0);
+                        
+                        // Handle octave increment - when we go from B to C, increment octave
+                        if (i > 0) {
+                            const prevLetter = scaleNotes[i-1].charAt(0);
+                            if (prevLetter === 'B' && currentNoteLetter === 'C') {
+                                currentOctave++;
+                            }
+                        }
+                        
+                        // Determine hand marking based on clef and octave
+                        let hand = '';
+                        if (clef === 'treble' && currentOctave === 3) {
+                            hand = '_treble';
+                        } else if (clef === 'bass' && currentOctave === 4) {
+                            hand = '_bass';
+                        }
+                        
+                        const noteKey = currentNoteLetter + currentOctave + hand;
+                        
+                        console.log('Looking for note:', noteKey, 'for scale position', i);
+                        
+                        // Check if this note exists and is in valid range
+                        if (NOTE_POSITIONS[noteKey]) {
+                            const position = NOTE_POSITIONS[noteKey];
+                            let validPosition = false;
+                            
+                            if (clef === 'treble') {
+                                validPosition = position >= 2 && position <= 25;
+                            } else {
+                                validPosition = position >= 25 && position <= 48;
+                            }
+                            
+                            if (validPosition) {
+                                // Determine if we need an accidental
+                                let accidental = null;
+                                if (currentScaleNote.includes('#')) {
+                                    accidental = 'sharp';
+                                } else if (currentScaleNote.includes('b')) {
+                                    accidental = 'flat';
+                                }
+                                
+                                sequence.push({
+                                    note: currentNoteLetter,
+                                    scaleNote: currentScaleNote,
+                                    octave: currentOctave,
+                                    hand: hand,
+                                    fullKey: noteKey,
+                                    scale: randomScale,
+                                    accidental: accidental
+                                });
+                                
+                                console.log('Added note:', noteKey, 'with accidental:', accidental);
+                            } else {
+                                console.log('Note out of range:', noteKey, 'position:', position);
+                                allNotesValid = false;
+                                break;
+                            }
+                        } else {
+                            console.log('Note does not exist:', noteKey);
+                            allNotesValid = false;
+                            break;
+                        }
+                    }
+                    
+                    if (allNotesValid && sequence.length === 7) {
+                        validSequence = sequence;
+                        console.log('SUCCESS: Built complete 7-note scale starting at:', startingNote);
+                        break;
+                    } else {
+                        console.log('FAILED: Could not build complete scale from:', startingNote);
+                    }
+                }
+                
+                if (validSequence) {
+                    gameState.currentScale.notes = validSequence;
+                    gameState.currentScale.currentIndex = 0;
+                    gameState.currentScale.clef = clef;
+                    gameState.currentScale.scaleName = randomScale;
+                    
+                    console.log('Final scale sequence:', validSequence.map(n => n.scaleNote + n.octave + n.hand));
+                    // Show scale name
+                    const scaleNames = {
+                        'C': 'C Major', 'G': 'G Major', 'D': 'D Major', 'A': 'A Major', 'E': 'E Major',
+                        'F': 'F Major', 'B': 'B Major', 'Am': 'A Minor', 'Em': 'E Minor', 
+                        'Bm': 'B Minor', 'Dm': 'D Minor', 'Gm': 'G Minor', 'Cm': 'C Minor', 'Fm': 'F Minor'
+                    };
+                    const displayName = scaleNames[randomScale] || randomScale;
+                    document.getElementById('currentScaleDisplay').textContent = `Scale: ${displayName}`;
+                    document.getElementById('currentScaleDisplay').style.display = 'block';
+                } else {
+                    console.log('Could not generate any valid scale, using random note');
+                    return generateNote();
+                }
+            }
+            
+            // Get next note in sequence
+            const selectedNote = gameState.currentScale.notes[gameState.currentScale.currentIndex];
+            gameState.currentScale.currentIndex++;
+            
+            console.log('Sequential note:', selectedNote.scaleNote + selectedNote.octave + selectedNote.hand, 
+                        'Index:', gameState.currentScale.currentIndex - 1);
+            
+            return {
+                note: selectedNote.note,
+                scaleNote: selectedNote.scaleNote,
+                octave: selectedNote.octave,
+                hand: selectedNote.hand,
+                fullKey: selectedNote.fullKey,
+                accidental: selectedNote.accidental,
+                area: gameState.currentScale.clef,
+                scale: gameState.currentScale.scaleName
+            };
+        }
+
         function createNoteElement(noteData, isStill = false) {
             const noteElement = document.createElement('div');
             noteElement.className = isStill ? 'still-note' : 'moving-note';
@@ -1710,7 +1942,7 @@
         function showNote() {
             if (!gameState.isPlaying || gameState.gameMode !== 'moving') return;
 
-            const noteData = generateNote();
+            const noteData = gameState.noteMode === 'scales' ? generateScaleNote() : generateNote();
             const movingNote = createNoteElement(noteData, false);
             movingNote.style.right = '-30px'; // Start outside the frame
             movingNote.style.animationDuration = '8000ms';
@@ -1747,12 +1979,12 @@
             gameState.stillNotes = [];
             gameState.currentStillNoteIndex = 0;
             
-            const noteCount = 8;
+            const noteCount = gameState.noteMode === 'scales' ? 7 : 8;
             const containerWidth = container.offsetWidth || 300;
             const spacing = containerWidth / (noteCount + 1);
             
             for (let i = 0; i < noteCount; i++) {
-                const noteData = generateNote();
+                const noteData = gameState.noteMode === 'scales' ? generateScaleNote() : generateNote();
                 const stillNote = createNoteElement(noteData, true);
                 stillNote.style.left = `${spacing * (i + 1) - 9}px`; // Center the note
                 stillNote.style.position = 'absolute';
@@ -1905,6 +2137,12 @@
                 targetNote.querySelector('.note-head').classList.add('correct');
                 targetNote.noteData.guessed = true;
                 handleCorrectAnswer();
+                // Check if this was the last note of the scale (index 6 = 7th note)
+                if (gameState.noteMode === 'scales' && gameState.currentScale && 
+                    gameState.currentScale.currentIndex === gameState.currentScale.notes.length) {
+                    // Scale completed, next note will trigger new scale display
+                }
+
             } else {
                 targetNote.querySelector('.note-head').classList.add('incorrect');
                 targetNote.noteData.guessed = true;
@@ -2161,6 +2399,7 @@
             }
             document.getElementById('endGameBtn').style.display = 'inline-block';
             document.getElementById('gameMode').disabled = true;
+            document.getElementById('noteMode').disabled = true;
 
             // Store the current selectedRegions before resetting
             const currentSelectedRegions = gameState.selectedRegions || ['above', 'treble', 'middle', 'bass', 'below'];
@@ -2174,6 +2413,13 @@
                 difficulty: document.getElementById('difficultySelect').value,
                 gameMode: document.getElementById('gameMode').value,
                 selectedRegions: currentSelectedRegions, // ADD THIS LINE
+                noteMode: document.getElementById('noteMode').value,
+                currentScale: {
+                    notes: [],
+                    currentIndex: 0,
+                    clef: null,
+                    scaleName: null
+                },
                 isPlaying: true,
                 waitingForAnswer: false,
                 noteStartTime: 0,
@@ -2227,6 +2473,14 @@
             } else {
                 setTimeout(createStillNotes, 1000);
             }
+
+            // Show/hide scale display based on mode
+            if (gameState.noteMode === 'scales') {
+                document.getElementById('currentScaleDisplay').style.display = 'block';
+            } else {
+                document.getElementById('currentScaleDisplay').style.display = 'none';
+            }
+
             
             console.log('New game started in', gameState.gameMode, 'mode!');
         }
