@@ -6,9 +6,9 @@
 
 
     <title>Test app name replace</title>
-    <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="logo.png">
-    <link rel="icon" sizes="192x192" href="logo.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="logo7.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="logo7.png">
+    <link rel="icon" sizes="192x192" href="logo7.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="NoteNow">
 
@@ -712,7 +712,7 @@
 <body>
     <div class="welcome-screen" id="welcomeScreen">
         <div class="welcome-content">
-            <img src="logo.png" alt="NoteNow Logo" class="welcome-logo">
+            <img src="logo5.png" alt="NoteNow Logo" class="welcome-logo">
             <h1 style="margin: 0; font-size: 28px; font-weight: bold;"></h1>
         </div>
     </div>
@@ -867,8 +867,39 @@
             </div>
         </div>
 
-        <div id="currentScaleDisplay" style="position: relative; left: 10px; margin-top: 5px; font-size: 16px; color: #666; display: none;">
-            
+        <div id="scaleInfoContainer" style="display: none; width: 100%; margin-top: 10px;">
+            <div id="currentScaleDisplay" style="font-size: 16px; color: #666; margin-bottom: 8px; text-align: center;">
+                Scale: C Major
+            </div>
+            <div id="miniStaffDisplay" style="position: relative; height: 80px; width: 300px; margin: 0 auto;">
+                <!-- Mini staff container with positioning variables -->
+                <div id="miniTrebleStaff" style="position: absolute; top: 10px; left: 40px;">
+                    <!-- Treble staff lines -->
+                    <div style="position: absolute; top: 0px; left: 0; width: 100px; height: 1px; background: #666;"></div>
+                    <div style="position: absolute; top: 10px; left: 0; width: 100px; height: 1px; background: #666;"></div>
+                    <div style="position: absolute; top: 20px; left: 0; width: 100px; height: 1px; background: #666;"></div>
+                    <div style="position: absolute; top: 30px; left: 0; width: 100px; height: 1px; background: #666;"></div>
+                    <div style="position: absolute; top: 40px; left: 0; width: 100px; height: 1px; background: #666;"></div>
+                    
+                    <!-- Treble clef -->
+                    <img src="G.png" alt="Treble Clef" style="position: absolute; left: 5px; top: -8px; width: 23px; height: 60px;filter: invert(1) grayscale(1) brightness(0.4);">
+                </div>
+                
+                <div id="miniBassStaff" style="position: absolute; top: 10px; left: 160px;filter: invert(1) grayscale(1) brightness(0.4);">
+                    <!-- Bass staff lines -->
+                    <div style="position: absolute; top: 0px; left: 0; width: 100px; height: 1px; background: #666;"></div>
+                    <div style="position: absolute; top: 10px; left: 0; width: 100px; height: 1px; background: #666;"></div>
+                    <div style="position: absolute; top: 20px; left: 0; width: 100px; height: 1px; background: #666;"></div>
+                    <div style="position: absolute; top: 30px; left: 0; width: 100px; height: 1px; background: #666;"></div>
+                    <div style="position: absolute; top: 40px; left: 0; width: 100px; height: 1px; background: #666;"></div>
+                    
+                    <!-- Bass clef -->
+                    <img src="F.png" alt="Bass Clef" style="position: absolute; left: 0px; top: 0px; width: 40px; height: 30px;">
+                </div>
+                
+                <!-- Accidentals container -->
+                <div id="miniAccidentalsContainer"></div>
+            </div>
         </div>
 
 
@@ -1309,8 +1340,16 @@
                 
                 if (this.value === 'still') {
                     difficultySelect.disabled = true;
+                    difficultySelect.style.opacity = '0.5';
+                    // Update difficulty display
+                    document.getElementById('difficulty').textContent = 'Still';
                 } else {
                     difficultySelect.disabled = false;
+                    difficultySelect.style.opacity = '1';
+                    // Restore difficulty display
+                    const currentDifficulty = difficultySelect.value;
+                    document.getElementById('difficulty').textContent = 
+                        currentDifficulty.charAt(0).toUpperCase() + currentDifficulty.slice(1);
                 }
             });
 
@@ -1358,6 +1397,25 @@
             document.getElementById('regionSelect').disabled = false; // ADD THIS LINE
             document.getElementById('noteMode').disabled = false;
             document.getElementById('currentScaleDisplay').style.display = 'none';
+            document.getElementById('scaleInfoContainer').style.display = 'none';
+            document.getElementById('scaleInfoContainer').style.display = 'none';
+            // Clear any old scale info
+            document.getElementById('currentScaleDisplay').textContent = '';
+            // Clear old accidentals
+            const trebleStaff = document.getElementById('miniTrebleStaff');
+            const bassStaff = document.getElementById('miniBassStaff');
+            if (trebleStaff && bassStaff) {
+                trebleStaff.querySelectorAll('div').forEach(div => {
+                    if (div.textContent === '♯' || div.textContent === '♭') {
+                        div.remove();
+                    }
+                });
+                bassStaff.querySelectorAll('div').forEach(div => {
+                    if (div.textContent === '♯' || div.textContent === '♭') {
+                        div.remove();
+                    }
+                });
+            }
             
             // Clear any existing notes
             const existingNotes = document.querySelectorAll('.moving-note');
@@ -1414,6 +1472,9 @@
 
             // Hide end game button
             document.getElementById('endGameBtn').style.display = 'none';
+
+            // Hide scale display when game ends
+            document.getElementById('scaleInfoContainer').style.display = 'none';
 
             
             // Show start screen
@@ -1729,8 +1790,14 @@
                         'Bm': 'B Minor', 'Dm': 'D Minor', 'Gm': 'G Minor', 'Cm': 'C Minor', 'Fm': 'F Minor'
                     };
                     const displayName = scaleNames[randomScale] || randomScale;
+                    console.log('Setting scale display to:', displayName);
+                    console.log('Scale container element:', document.getElementById('scaleInfoContainer'));
+                    console.log('Scale text element:', document.getElementById('currentScaleDisplay'));
+
                     document.getElementById('currentScaleDisplay').textContent = `Scale: ${displayName}`;
+                    document.getElementById('scaleInfoContainer').style.display = 'block';
                     document.getElementById('currentScaleDisplay').style.display = 'block';
+                    displayMiniKeySignature(randomScale);
                 } else {
                     console.log('Could not generate any valid scale, using random note');
                     return generateNote();
@@ -2443,6 +2510,13 @@
             document.getElementById('difficultySelect').disabled = true;
             document.getElementById('gameMode').disabled = true;
             document.getElementById('regionSelect').disabled = true; // ADD THIS LINE
+            // Update difficulty display based on game mode
+            if (gameState.gameMode === 'still') {
+                document.getElementById('difficulty').textContent = 'Still';
+            } else {
+                document.getElementById('difficulty').textContent = 
+                    gameState.difficulty.charAt(0).toUpperCase() + gameState.difficulty.slice(1);
+            }
 
 
             // Handle random scale selection
@@ -2475,11 +2549,9 @@
             }
 
             // Show/hide scale display based on mode
-            if (gameState.noteMode === 'scales') {
-                document.getElementById('currentScaleDisplay').style.display = 'block';
-            } else {
-                document.getElementById('currentScaleDisplay').style.display = 'none';
-            }
+            // Show/hide scale display based on mode
+            // Hide scale display initially - it will show when first scale is generated
+            document.getElementById('scaleInfoContainer').style.display = 'none';
 
             
             console.log('New game started in', gameState.gameMode, 'mode!');
@@ -2517,6 +2589,122 @@
             document.getElementById('wrongNoteDisplay').style.display = 'none';
         }
 
+        function displayMiniKeySignature(selectedScale) {
+            // Clear old accidentals from both staff containers
+            const trebleStaff = document.getElementById('miniTrebleStaff');
+            const bassStaff = document.getElementById('miniBassStaff');
+            
+            // Remove all existing accidental elements
+            trebleStaff.querySelectorAll('div').forEach(div => {
+                if (div.textContent === '♯' || div.textContent === '♭') {
+                    div.remove();
+                }
+            });
+            
+            bassStaff.querySelectorAll('div').forEach(div => {
+                if (div.textContent === '♯' || div.textContent === '♭') {
+                    div.remove();
+                }
+            });
+            
+            const scaleAccidentals = SCALE_DEFINITIONS[selectedScale] || [];
+            
+            // Convert main game positions to mini staff positions
+            // Main game: position 18 (F4) maps to treble line 4 (40px)
+            // Main game: position 15 (B4) maps to treble line 3 (20px) 
+            // Main game: position 12 (E5) maps to treble space 2 (35px)
+            // etc.
+            
+            const miniAccidentalPositions = {
+                'F#': [
+                    { clef: 'treble', top: 0, left: 30 },   // F line (0px)
+                    { clef: 'bass', top: 10, left: 40 }     // F line (10px)
+                ],
+                'C#': [
+                    { clef: 'treble', top: 15, left: 30 },  // C space (15px)
+                    { clef: 'bass', top: 25, left: 40 }     // C space (25px)
+                ],
+                'G#': [
+                    { clef: 'treble', top: 30, left: 30 },  // G line (30px)
+                    { clef: 'bass', top: 5, left: 40 }      // G space (5px)
+                ],
+                'D#': [
+                    { clef: 'treble', top: 10, left: 30 },  // D line (10px)
+                    { clef: 'bass', top: 20, left: 40 }     // D line (20px)
+                ],
+                'A#': [
+                    { clef: 'treble', top: 25, left: 30 },  // A space (25px)
+                    { clef: 'bass', top: 0, left: 40 }      // A line (0px)
+                ],
+                'E#': [
+                    { clef: 'treble', top: 5, left: 30 },   // E space (5px)
+                    { clef: 'bass', top: 15, left: 40 }     // E space (15px)
+                ],
+                'B#': [
+                    { clef: 'treble', top: 20, left: 30 },  // B line (20px)
+                    { clef: 'bass', top: 30, left: 40 }     // B line (30px)
+                ],
+                
+                // Flats
+                'Bb': [
+                    { clef: 'treble', top: 20, left: 30 },  // B line (20px)
+                    { clef: 'bass', top: 30, left: 40 }     // B line (30px)
+                ],
+                'Eb': [
+                    { clef: 'treble', top: 5, left: 30 },   // E space (5px)
+                    { clef: 'bass', top: 15, left: 40 }     // E space (15px)
+                ],
+                'Ab': [
+                    { clef: 'treble', top: 25, left: 30 },  // A space (25px)
+                    { clef: 'bass', top: 0, left: 40 }      // A line (0px)
+                ],
+                'Db': [
+                    { clef: 'treble', top: 10, left: 30 },  // D line (10px)
+                    { clef: 'bass', top: 20, left: 40 }     // D line (20px)
+                ],
+                'Gb': [
+                    { clef: 'treble', top: 30, left: 30 },  // G line (30px)
+                    { clef: 'bass', top: 5, left: 40 }      // G space (5px)
+                ],
+                'Cb': [
+                    { clef: 'treble', top: 15, left: 30 },  // C space (15px)
+                    { clef: 'bass', top: 25, left: 40 }     // C space (25px)
+                ],
+                'Fb': [
+                    { clef: 'treble', top: 0, left: 30 },   // F line (0px)
+                    { clef: 'bass', top: 10, left: 40 }     // F line (10px)
+                ]
+            };
+            
+            scaleAccidentals.forEach((accidental, index) => {
+                const positions = miniAccidentalPositions[accidental];
+                if (!positions) return;
+                
+                positions.forEach(position => {
+                    const accidentalElement = document.createElement('div');
+                    accidentalElement.style.position = 'absolute';
+                    accidentalElement.style.fontSize = '14px';
+                    accidentalElement.style.color = '#666';
+                    accidentalElement.style.fontWeight = 'bold';
+                    accidentalElement.style.left = (position.left + (index * 8)) + 'px';
+                    accidentalElement.style.top = position.top + 'px';
+                    accidentalElement.style.transform = 'translateY(-50%)';
+                    
+                    if (accidental.includes('#')) {
+                        accidentalElement.textContent = '♯';
+                    } else {
+                        accidentalElement.textContent = '♭';
+                    }
+                    
+                    // Append to the appropriate staff container
+                    if (position.clef === 'treble') {
+                        trebleStaff.appendChild(accidentalElement);
+                    } else {
+                        bassStaff.appendChild(accidentalElement);
+                    }
+                });
+            });
+        }
 
 
 
