@@ -421,15 +421,54 @@
             width: 26px;
             height: 90px;
             background: #333;
-            color: transparent; /* Hidden by default */
-            margin: 0 -13px;
-            z-index: 2;
+            color: transparent;
+            margin: 0 -16px;
+            z-index: 4;
             position: relative;
             display: flex;
             align-items: flex-end;
             justify-content: center;
             padding-bottom: 6px;
             font-size: 9px;
+        }
+
+        .black-key::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            width: 16px;
+            height: 90px;
+            background: #464646;
+            z-index: -1;
+        }
+        /* Move text above the gray rectangle */
+        .black-key::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -6px;     /* Extend 6px to the left */
+            right: -6px;    /* Extend 6px to the right */
+            bottom: 0;
+            z-index: 5;     /* Above everything else to catch clicks */
+            background: transparent;
+            pointer-events: auto;
+        }
+
+
+
+        /* Left side keys - gray rectangle positioned to the left */
+        .black-key:nth-child(2)::before, /* C# */
+        .black-key:nth-child(5)::before  /* D# */
+        {
+            left: 2px;
+        }
+
+        /* Right side keys - gray rectangle positioned to the right */
+        .black-key:nth-child(8)::before,  /* F# */
+        .black-key:nth-child(10)::before, /* G# */
+        .black-key:nth-child(14)::before  /* A# */
+        {
+            right: 2px;
         }
 
         .key:hover {
@@ -1372,13 +1411,19 @@
                 
                 gameState.noteMode = this.value;
                 const regionSelect = document.getElementById('regionSelect');
+                const scaleSelect = document.getElementById('scale');
                 
                 if (this.value === 'scales') {
                     regionSelect.disabled = true;
                     regionSelect.style.opacity = '0.5';
+                    scaleSelect.disabled = true;
+                    scaleSelect.style.opacity = '0.5';
+                    scaleSelect.value = 'C'; // Force to C major
                 } else {
                     regionSelect.disabled = false;
                     regionSelect.style.opacity = '1';
+                    scaleSelect.disabled = false;
+                    scaleSelect.style.opacity = '1';
                 }
             });
 
