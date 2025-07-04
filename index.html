@@ -15,6 +15,8 @@
     <!-- Add Tone.js library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 
+
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -460,7 +462,7 @@
         .black-key:nth-child(2)::before, /* C# */
         .black-key:nth-child(5)::before  /* D# */
         {
-            left: 2px;
+            left: 5px;
         }
 
         /* Right side keys - gray rectangle positioned to the right */
@@ -468,7 +470,7 @@
         .black-key:nth-child(10)::before, /* G# */
         .black-key:nth-child(14)::before  /* A# */
         {
-            right: 2px;
+            right: 5px;
         }
 
         .key:hover {
@@ -510,6 +512,30 @@
             display: none;
         }
 
+        .sound-toggle {
+            position: absolute;
+            right: 8px;
+            top: 20%;
+            transform: translateY(-50%);
+            width: 22px;
+            height: 22px;
+            background: #555;
+            color: white;
+            border: 1px solid #777;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            user-select: none;
+            z-index: 10;
+            opacity: 1;
+        }
+
+        .sound-toggle:hover {
+            background: #666;
+        }
 
         .scale-display {
             font-size: 20px;
@@ -956,6 +982,9 @@
         // Game Configuration
         const TARGET_SCORE = 80;
 
+        // Global sound state
+        window.soundEnabled = true;
+
         // Game State
         let gameState = {
             score: 0,
@@ -1050,7 +1079,7 @@
         // Scale definitions and accidental positions
         const SCALE_DEFINITIONS = {
             'C': [], 'G': ['F#'], 'D': ['F#', 'C#'], 'A': ['F#', 'C#', 'G#'], 'E': ['F#', 'C#', 'G#', 'D#'],
-            'F': ['Bb'], 'B': ['C#', 'F#'], 'Am': [], 'Em': ['F#'], 'Bm': ['F#', 'C#'],
+            'F': ['Bb'], 'B': ['C#', 'D#', 'F#','G#', 'A#'], 'Am': [], 'Em': ['F#'], 'Bm': ['F#', 'C#'],
             'Dm': ['Bb'], 'Gm': ['Bb', 'Eb'], 'Cm': ['Bb', 'Eb', 'Ab'], 'Fm': ['Bb', 'Eb', 'Ab','Db']
         };
 
@@ -1137,6 +1166,54 @@
         function hideWelcomeScreen() {
             document.getElementById('welcomeScreen').style.display = 'none';
         }
+
+        function getGameSettingsSummary() {
+            let settings = [];
+            
+            // Mode
+            settings.push(`<strong>Mode:</strong> ${gameState.gameMode === 'moving' ? 'Move' : 'Still'}`);
+            
+            // Difficulty (only if Move mode)
+            if (gameState.gameMode === 'moving') {
+                const difficultyName = gameState.difficulty.charAt(0).toUpperCase() + gameState.difficulty.slice(1);
+                settings.push(`<strong>Difficulty:</strong> ${difficultyName}`);
+            }
+            
+            // Notes type
+            settings.push(`<strong>Notes:</strong> ${gameState.noteMode === 'scales' ? 'Scales' : 'Random'}`);
+            
+            // Key/Scale (only if Random notes mode)
+            if (gameState.noteMode === 'random') {
+                const scaleNames = {
+                    'C': 'C Major', 'G': 'G Major', 'D': 'D Major', 'A': 'A Major', 'E': 'E Major',
+                    'F': 'F Major', 'B': 'B Major', 'Am': 'A Minor', 'Em': 'E Minor', 
+                    'Bm': 'B Minor', 'Dm': 'D Minor', 'Gm': 'G Minor', 'Cm': 'C Minor', 'Fm': 'F Minor'
+                };
+                const scaleName = scaleNames[gameState.selectedScale] || gameState.selectedScale;
+                settings.push(`<strong>Key:</strong> ${scaleName}`);
+            }
+            
+            // Region (only if Random notes mode)
+            if (gameState.noteMode === 'random') {
+                const regionNames = {
+                    'above': 'Above Treble',
+                    'treble': 'Treble Clef', 
+                    'middle': 'Middle',
+                    'bass': 'Bass Clef',
+                    'below': 'Below Bass'
+                };
+                
+                if (gameState.selectedRegions.length === 5) {
+                    settings.push(`<strong>Region:</strong> All Regions`);
+                } else {
+                    const regionList = gameState.selectedRegions.map(r => regionNames[r] || r).join(', ');
+                    settings.push(`<strong>Region:</strong> ${regionList}`);
+                }
+            }
+            
+            return settings.join('<br>');
+        }
+
 
         // Auto-hide after 2 seconds, or add click to dismiss
         setTimeout(hideWelcomeScreen, 1000);
@@ -1286,6 +1363,28 @@
             });
 
             pianoKeys.appendChild(supportNotesToggle);
+
+            // Add sound toggle button on the right side
+            const soundToggle = document.createElement('div');
+            soundToggle.className = 'sound-toggle';
+            soundToggle.innerHTML = '♪';  // Musical note symbol
+            soundToggle.title = 'Toggle sound on/off';
+
+            let soundEnabled = true; // Default on
+            soundToggle.addEventListener('click', () => {
+                window.soundEnabled = !window.soundEnabled;
+                if (window.soundEnabled) {
+                    soundToggle.innerHTML = '♪';
+                    soundToggle.style.opacity = '1';
+                } else {
+                    soundToggle.innerHTML = '🔇';
+                    soundToggle.style.opacity = '0.5';
+                }
+            });
+            
+
+            pianoKeys.appendChild(soundToggle);
+
 
 
 
@@ -2416,6 +2515,12 @@
                 <div style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
                     <div style="font-size: 24px; font-weight: bold; color: #FFD700;">Final Score: ${finalScore}%</div>
                 </div>
+                <div style="margin: 5px 0; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 14px; text-align: left;">
+                    <div style="font-weight: bold; margin-bottom: 8px;">Game Settings:</div>
+                    ${getGameSettingsSummary()}
+                </div>
+ 
+
                 <div style="margin: 20px 0; font-size: 16px;">
                     <div><strong>Notes Hit:</strong> ${gameState.score}/${TARGET_SCORE}</div>
                     <div><strong>Accuracy:</strong> ${accuracy}%</div>
@@ -2488,12 +2593,17 @@
                 <div style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
                     <div style="font-size: 24px; font-weight: bold; color: #FFD700;">Final Score: ${finalScore}%</div>
                 </div>
+                <div style="margin: 5px 0; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 14px; text-align: left;">
+                    <div style="font-weight: bold; margin-bottom: 8px;">Game Settings:</div>
+                    ${getGameSettingsSummary()}
+                </div>
                 <div style="margin: 20px 0; font-size: 16px;">
                     <div><strong>Notes Hit:</strong> ${gameState.score}/${TARGET_SCORE}</div>
                     <div><strong>Accuracy:</strong> ${accuracy}%</div>
                     <div><strong>Avg Reaction Time:</strong> ${avgReactionTime}ms</div>
                     <div><strong>Area for Improvement:</strong> ${areaNames[worstArea] || worstArea}</div>
                 </div>
+
                 <button class="play-again-btn" onclick="showStartScreen()">Back to game</button>
             `;
             
@@ -2829,6 +2939,9 @@
         }
 
         function playPianoSound(note, octave) {
+            // Check if sound is enabled (we need to make soundEnabled global)
+            if (!window.soundEnabled) return;
+
             if (piano) {
                 const toneFormat = convertToToneFormat(note, octave);
                 const equivalents = getEnharmonicEquivalents(note);
