@@ -174,6 +174,142 @@
         }
 
 
+        .scale-selector {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .toggle-switches {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .select-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 8px;
+            flex: 1;
+            max-width: 60vw;
+            min-width: 200px;
+        }
+
+        .select-buttons select {
+            padding: 6px 4px;
+            font-size: 14px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            color: #333;
+            background-color: #f9f7f3;
+            width: 100%;
+            box-sizing: border-box;
+            min-width: 0;
+            text-overflow: ellipsis;
+        }
+        .select-buttons select:first-child {
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        .select-buttons select:nth-child(2) {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .select-buttons select:nth-child(3) {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .select-buttons select:disabled {
+            background-color: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* Media query for very small screens */
+        @media (max-width: 320px) {
+            .select-buttons {
+                max-width: 50vw;
+                min-width: 160px;
+            }
+            
+            .select-buttons select {
+                font-size: 12px;
+                padding: 4px 2px;
+            }
+        }
+
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+        }
+
+        .toggle-input {
+            display: none;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .toggle-slider {
+            width: 50px;
+            height: 26px;
+            background-color: #ccc;
+            border-radius: 26px;
+            position: relative;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background-color: white;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+
+        .toggle-input:checked + .toggle-label .toggle-slider {
+            background-color: #5e7392;
+        }
+
+        .toggle-input:checked + .toggle-label .toggle-slider::before {
+            transform: translateX(24px);
+        }
+
+        .toggle-input:disabled + .toggle-label {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .toggle-text {
+            font-size: 14px;
+            font-weight: 500;
+            min-width: 50px;
+        }
+
+        select {
+            max-width: 110px;
+            min-width: 90px;
+        }
+
+
+
 
 
 
@@ -669,10 +805,10 @@
             margin-top: 15px;
             padding: 12px 24px;
             font-size: 20px;
-            background: #bba598;
-            color: #333;
+            background: #4e6386;
+            color: whitesmoke;
             border: 1px solid #333;
-            border-radius: 6px;;
+            border-radius: 6px;
             cursor: pointer;
         }
 
@@ -800,56 +936,65 @@
                 
                 <!-- Scale Selection -->
                 <div class="scale-selector">
-                    <select id="scale">
-                        <option value="C">C Major</option>
-                        <option value="D">D Major</option>
-                        <option value="E">E Major</option>
-                        <option value="F">F Major</option>
-                        <option value="G">G Major</option>
-                        <option value="A">A Major</option>
-                        <option value="B">B Major</option>
-                        <option value="Cm">C Minor</option>
-                        <option value="Dm">D Minor</option>
-                        <option value="Em">E Minor</option>
-                        <option value="Fm">F Minor</option>
-                        <option value="Gm">G Minor</option>
-                        <option value="Am">A Minor</option>
-                        <option value="Bm">B Minor</option>
-                        <option value="random">Random</option>
-                    </select>
+                    <div class="toggle-switches">
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="gameModeToggle" class="toggle-input">
+                            <label for="gameModeToggle" class="toggle-label">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-text">Move</span>
+                            </label>
+                        </div>
+                        
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="noteModeToggle" class="toggle-input">
+                            <label for="noteModeToggle" class="toggle-label">
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-text">Random</span>
+                            </label>
+                        </div>
+                    </div>
                     
-                    <select id="difficultySelect">
-                        <option value="beginner">Beginner</option>
-                        <option value="novice">Novice</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="advanced">Advanced</option>
-                        <option value="expert">Expert</option>
-                        <option value="master">Master</option>
-                        <option value="legendary">Legendary</option>
-                        <option value="impossible">Impossible</option>
-                    </select>
+                    <div class="select-buttons">
+                        <select id="scale">
+                            <option value="C">C Major</option>
+                            <option value="D">D Major</option>
+                            <option value="E">E Major</option>
+                            <option value="F">F Major</option>
+                            <option value="G">G Major</option>
+                            <option value="A">A Major</option>
+                            <option value="B">B Major</option>
+                            <option value="Cm">C Minor</option>
+                            <option value="Dm">D Minor</option>
+                            <option value="Em">E Minor</option>
+                            <option value="Fm">F Minor</option>
+                            <option value="Gm">G Minor</option>
+                            <option value="Am">A Minor</option>
+                            <option value="Bm">B Minor</option>
+                            <option value="random">Random</option>
+                        </select>
+                        
+                        <select id="difficultySelect">
+                            <option value="beginner">Beginner</option>
+                            <option value="novice">Novice</option>
+                            <option value="intermediate">Intermediate</option>
+                            <option value="advanced">Advanced</option>
+                            <option value="expert">Expert</option>
+                            <option value="master">Master</option>
+                            <option value="legendary">Legendary</option>
+                            <option value="impossible">Impossible</option>
+                        </select>
 
-                    <select id="gameMode">
-                        <option value="moving">Move</option>
-                        <option value="still">Still</option>
-                    </select>
-
-                    <select id="noteMode">
-                        <option value="random">Random Notes</option>
-                        <option value="scales">Scales</option>
-                    </select>
-
-                    <select id="regionSelect">
-                        <option value="all">All Regions</option>
-                        <option value="above">Above Treble</option>
-                        <option value="treble">Treble Clef</option>
-                        <option value="middle">Middle</option>
-                        <option value="bass">Bass Clef</option>
-                        <option value="below">Below Bass</option>
-                        <option value="above,below">Above + Below</option>
-                        <option value="treble,bass">Treble + Bass</option>
-                    </select>
-
+                        <select id="regionSelect">
+                            <option value="all">All Regions</option>
+                            <option value="above">Above Treble</option>
+                            <option value="treble">Treble Clef</option>
+                            <option value="middle">Middle</option>
+                            <option value="bass">Bass Clef</option>
+                            <option value="below">Below Bass</option>
+                            <option value="above,below">Above + Below</option>
+                            <option value="treble,bass">Treble + Bass</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -1456,6 +1601,57 @@
         }
 
         function setupEventListeners() {
+            // Game mode toggle
+            document.getElementById('gameModeToggle').addEventListener('change', function() {
+                if (gameState.isPlaying) {
+                    this.checked = !this.checked;
+                    return;
+                }
+                
+                gameState.gameMode = this.checked ? 'still' : 'moving';
+                this.nextElementSibling.querySelector('.toggle-text').textContent = this.checked ? 'Still' : 'Move';
+                
+                const difficultySelect = document.getElementById('difficultySelect');
+                if (this.checked) {
+                    difficultySelect.disabled = true;
+                    difficultySelect.style.opacity = '0.5';
+                    document.getElementById('difficulty').textContent = 'Still';
+                } else {
+                    difficultySelect.disabled = false;
+                    difficultySelect.style.opacity = '1';
+                    const currentDifficulty = difficultySelect.value;
+                    document.getElementById('difficulty').textContent = 
+                        currentDifficulty.charAt(0).toUpperCase() + currentDifficulty.slice(1);
+                }
+            });
+
+            // Note mode toggle
+            document.getElementById('noteModeToggle').addEventListener('change', function() {
+                if (gameState.isPlaying) {
+                    this.checked = !this.checked;
+                    return;
+                }
+                
+                gameState.noteMode = this.checked ? 'scales' : 'random';
+                this.nextElementSibling.querySelector('.toggle-text').textContent = this.checked ? 'Scales' : 'Random';
+                
+                const regionSelect = document.getElementById('regionSelect');
+                const scaleSelect = document.getElementById('scale');
+                
+                if (this.checked) {
+                    regionSelect.disabled = true;
+                    regionSelect.style.opacity = '0.5';
+                    scaleSelect.disabled = true;
+                    scaleSelect.style.opacity = '0.5';
+                    scaleSelect.value = 'C';
+                } else {
+                    regionSelect.disabled = false;
+                    regionSelect.style.opacity = '1';
+                    scaleSelect.disabled = false;
+                    scaleSelect.style.opacity = '1';
+                }
+            });
+
             document.getElementById('scale').addEventListener('change', function() {
                 gameState.selectedScale = this.value;
                 displayKeySignature(this.value);
@@ -1467,31 +1663,6 @@
                     this.value.charAt(0).toUpperCase() + this.value.slice(1);
             });
 
-            document.getElementById('gameMode').addEventListener('change', function() {
-                if (gameState.isPlaying) {
-                    // Revert to previous value if game is running
-                    this.value = gameState.gameMode;
-                    return; // Don't allow the change
-                }
-                
-                gameState.gameMode = this.value;
-                const difficultySelect = document.getElementById('difficultySelect');
-                
-                if (this.value === 'still') {
-                    difficultySelect.disabled = true;
-                    difficultySelect.style.opacity = '0.5';
-                    // Update difficulty display
-                    document.getElementById('difficulty').textContent = 'Still';
-                } else {
-                    difficultySelect.disabled = false;
-                    difficultySelect.style.opacity = '1';
-                    // Restore difficulty display
-                    const currentDifficulty = difficultySelect.value;
-                    document.getElementById('difficulty').textContent = 
-                        currentDifficulty.charAt(0).toUpperCase() + currentDifficulty.slice(1);
-                }
-            });
-
             document.getElementById('regionSelect').addEventListener('change', function() {
                 const value = this.value;
                 if (value === 'all') {
@@ -1499,38 +1670,9 @@
                 } else {
                     gameState.selectedRegions = value.split(',');
                 }
-                console.log('Selected regions:', gameState.selectedRegions);
             });
 
-            document.getElementById('noteMode').addEventListener('change', function() {
-                if (gameState.isPlaying) {
-                    // Revert to previous value if game is running
-                    this.value = gameState.noteMode;
-                    return;
-                }
-                
-                gameState.noteMode = this.value;
-                const regionSelect = document.getElementById('regionSelect');
-                const scaleSelect = document.getElementById('scale');
-                
-                if (this.value === 'scales') {
-                    regionSelect.disabled = true;
-                    regionSelect.style.opacity = '0.5';
-                    scaleSelect.disabled = true;
-                    scaleSelect.style.opacity = '0.5';
-                    scaleSelect.value = 'C'; // Force to C major
-                } else {
-                    regionSelect.disabled = false;
-                    regionSelect.style.opacity = '1';
-                    scaleSelect.disabled = false;
-                    scaleSelect.style.opacity = '1';
-                }
-            });
-
-            // Initialize key signature display
             displayKeySignature(gameState.selectedScale);
-
-
         }
 
         function showStartScreen() {
@@ -1538,9 +1680,9 @@
             document.getElementById('gameStartOverlay').style.display = 'flex';
             document.getElementById('gameOver').style.display = 'none';
             document.getElementById('endGameBtn').style.display = 'none';
-            document.getElementById('gameMode').disabled = false;
-            document.getElementById('regionSelect').disabled = false; // ADD THIS LINE
-            document.getElementById('noteMode').disabled = false;
+            document.getElementById('gameModeToggle').disabled = false;
+            document.getElementById('regionSelect').disabled = false;
+            document.getElementById('noteModeToggle').disabled = false;
             document.getElementById('currentScaleDisplay').style.display = 'none';
             document.getElementById('scaleInfoContainer').style.display = 'none';
             document.getElementById('scaleInfoContainer').style.display = 'none';
@@ -1580,7 +1722,7 @@
             // Re-enable game configuration buttons
             document.getElementById('scale').disabled = false;
             document.getElementById('difficultySelect').disabled = false;
-            document.getElementById('gameMode').disabled = false;
+            document.getElementById('gameModeToggle').disabled = false;
             document.getElementById('regionSelect').disabled = false; // ADD THIS LINE
 
         }
@@ -1607,13 +1749,13 @@
             gameState.stillNotes = [];
             
             // Hide end game button
-            document.getElementById('endGameBtn').style.display = 'none';
-            document.getElementById('gameMode').disabled = false;
+            document.getElementById('gameModeToggle').disabled = false;
+            document.getElementById('noteModeToggle').disabled = false;
 
             // Re-enable game configuration buttons
             document.getElementById('scale').disabled = false;
             document.getElementById('difficultySelect').disabled = false;
-            document.getElementById('gameMode').disabled = false;
+            document.getElementById('gameModeToggle').disabled = false;
 
             // Hide end game button
             document.getElementById('endGameBtn').style.display = 'none';
@@ -2621,8 +2763,8 @@
                 });
             }
             document.getElementById('endGameBtn').style.display = 'inline-block';
-            document.getElementById('gameMode').disabled = true;
-            document.getElementById('noteMode').disabled = true;
+            document.getElementById('gameModeToggle').disabled = true;
+            document.getElementById('noteModeToggle').disabled = true;
 
             // Store the current selectedRegions before resetting
             const currentSelectedRegions = gameState.selectedRegions || ['above', 'treble', 'middle', 'bass', 'below'];
@@ -2634,9 +2776,9 @@
                 currentNoteOctave: 4,
                 selectedScale: document.getElementById('scale').value,
                 difficulty: document.getElementById('difficultySelect').value,
-                gameMode: document.getElementById('gameMode').value,
-                selectedRegions: currentSelectedRegions, // ADD THIS LINE
-                noteMode: document.getElementById('noteMode').value,
+                gameMode: gameState.gameMode, // Use existing state
+                selectedRegions: currentSelectedRegions,
+                noteMode: gameState.noteMode, // Use existing state
                 currentScale: {
                     notes: [],
                     currentIndex: 0,
@@ -2664,7 +2806,7 @@
             // Disable game configuration buttons during play
             document.getElementById('scale').disabled = true;
             document.getElementById('difficultySelect').disabled = true;
-            document.getElementById('gameMode').disabled = true;
+            // document.getElementById('gameMode').disabled = true;
             document.getElementById('regionSelect').disabled = true; // ADD THIS LINE
             // Update difficulty display based on game mode
             if (gameState.gameMode === 'still') {
