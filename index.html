@@ -192,7 +192,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 16px;
+            padding: 0 8px;
             border-right: 1px solid #ddd;
         }
 
@@ -422,6 +422,10 @@
         .note-head.incorrect {
             background: rgb(204, 53, 53);
         }
+        .chord-note .note-head.incorrect {
+            background: rgb(161, 161, 160); /* Orange color for chord wrong notes */
+        }
+
 
         /* Note stem - positioned relative to note head */
         .note-stem {
@@ -488,12 +492,40 @@
         }
 
 
-        /* Piano Keyboard */
-        .piano-container {
-            margin-bottom: 15px;
+        .piano-frame {
+            background: #333;
+            padding: 8px 8px 8px 8px;
+            border-radius: 8px;
+            position: relative;
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden; /* This creates the fixed viewing window */
+        }
+        .piano-frame:has(.piano-keys-container.sliding) {
+            padding-right: 16px; /* Double the right padding when sliding */
+        }
+
+        .piano-keys-container {
+            display: flex;
+            justify-content: center;
+            transition: transform 0.3s ease;
         }
 
 
+
+        .piano-slide-indicator {
+            position: absolute;
+            top: 50%;
+            right: 50px;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+            z-index: 10;
+        }
         .piano-keys {
             display: flex;
             justify-content: center;
@@ -503,7 +535,28 @@
             position: relative;
             width: 100%;
             box-sizing: border-box;
+            transition: transform 0.3s ease;
+            touch-action: pan-y;
+            overflow: hidden;
         }
+
+        .piano-keys-inner {
+            display: flex;
+            justify-content: flex-start;
+            width: 200%;
+            transition: transform 0.3s ease;
+        }
+
+        .piano-keys.sliding {
+            transform: translateX(-50%); /* Slide left to show higher octave */
+        }
+
+        .piano-keys-container.sliding {
+            justify-content: flex-start;
+            width: 200%; /* BACK to 200% */
+        }
+
+
 
         .key {
             margin: 0 1px;
@@ -1173,7 +1226,11 @@
             activeNotes: [],
             stillNotes: [],
             currentStillNoteIndex: 0,
-            selectedRegions: ['above', 'treble', 'middle', 'bass', 'below']  
+            selectedRegions: ['above', 'treble', 'middle', 'bass', 'below'],  
+            pianoSlideOffset: 0, // 0 = normal, 1 = slid one octave up
+            canSlide: false, // Only true when chord spans multiple octaves
+            isDragging: false,
+            dragStartX: 0
         };
 
         // Complete note position mapping
@@ -1310,13 +1367,27 @@
             return 'calc(14 * (100% / 48))'; // Default position
         }
 
-        function playPianoKey(pressedNote) {
+        function playPianoKey(pressedNote, octave = null) {
+            // Use the octave from the key if provided, otherwise use current
+            const noteOctave = octave || gameState.currentNoteOctave;
+            
             if (gameState.gameMode === 'moving') {
-                handleMovingNoteGuess(pressedNote);
+                handleMovingNoteGuess(pressedNote, noteOctave);
             } else {
-                handleStillNoteGuess(pressedNote);
+                handleStillNoteGuess(pressedNote, noteOctave);
             }
         }
+
+        function checkIfChordNeedsSliding(chordData) {
+            if (!chordData.isChord) return false;
+            
+            const octaves = chordData.notes.map(note => note.octave);
+            const minOctave = Math.min(...octaves);
+            const maxOctave = Math.max(...octaves);
+            
+            return maxOctave > minOctave; // True if chord spans multiple octaves
+        }
+
 
         // Scale definitions
         const SCALES = {
@@ -1487,19 +1558,25 @@
             
             const validPositions = findValidChordPositions(chordNotes);
             if (validPositions.length === 0) {
-                console.log('No valid positions found for chord:', randomChord);
-                return generateNote(); // Fallback to single note
+                return generateNote();
             }
             
             const selectedPosition = validPositions[Math.floor(Math.random() * validPositions.length)];
             
-            return {
+            const chordData = {
                 chordName: randomChord,
                 notes: selectedPosition.notes,
                 clef: selectedPosition.clef,
                 isChord: true,
                 area: selectedPosition.clef
             };
+            
+            // Check if this chord needs sliding and update game state
+            gameState.canSlide = checkIfChordNeedsSliding(chordData);
+            gameState.currentNoteOctave = Math.min(...chordData.notes.map(n => n.octave));
+            gameState.pianoSlideOffset = 0; // Reset slide position
+            
+            return chordData;
         }
 
 
@@ -1747,13 +1824,13 @@
             const pianoKeys = document.getElementById('pianoKeys');
             pianoKeys.innerHTML = '';
 
-            // Add toggle button
+            // Add toggle buttons (same as before)
             const toggleButton = document.createElement('div');
             toggleButton.className = 'key-labels-toggle';
             toggleButton.innerHTML = '👁';
             toggleButton.title = 'Toggle key labels';
             
-            let labelsVisible = false; // Default to hidden
+            let labelsVisible = false;
             toggleButton.addEventListener('click', () => {
                 labelsVisible = !labelsVisible;
                 const allKeys = pianoKeys.querySelectorAll('.key');
@@ -1769,8 +1846,7 @@
             
             pianoKeys.appendChild(toggleButton);
 
-
-            // Add this to createPianoKeys() function after the existing toggle button:
+            // Add other buttons...
             const supportNotesToggle = document.createElement('div');
             supportNotesToggle.className = 'support-notes-toggle';
             supportNotesToggle.innerHTML = '-c-';
@@ -1791,13 +1867,12 @@
 
             pianoKeys.appendChild(supportNotesToggle);
 
-            // Add sound toggle button on the right side
             const soundToggle = document.createElement('div');
             soundToggle.className = 'sound-toggle';
-            soundToggle.innerHTML = '♪';  // Musical note symbol
+            soundToggle.innerHTML = '♪';
             soundToggle.title = 'Toggle sound on/off';
 
-            let soundEnabled = true; // Default on
+            let soundEnabled = true;
             soundToggle.addEventListener('click', () => {
                 window.soundEnabled = !window.soundEnabled;
                 if (window.soundEnabled) {
@@ -1809,32 +1884,132 @@
                 }
             });
             
-
             pianoKeys.appendChild(soundToggle);
 
+            // Create FIXED piano frame
+            const pianoFrame = document.createElement('div');
+            pianoFrame.className = 'piano-frame';
+            pianoKeys.appendChild(pianoFrame);
 
+            // Create keys container inside the fixed frame
+            const keysContainer = document.createElement('div');
+            keysContainer.className = 'piano-keys-container';
+            pianoFrame.appendChild(keysContainer);
 
+            // Add slide indicator if needed
+            if (gameState.canSlide) {
+                const slideIndicator = document.createElement('div');
+                slideIndicator.className = 'piano-slide-indicator';
+                slideIndicator.textContent = '← Slide for higher notes';
+                pianoFrame.appendChild(slideIndicator);
+                
+                keysContainer.classList.add('sliding');
+            }
 
+            // Create keys (1 or 2 octaves based on canSlide)
+            createKeysInContainer(keysContainer);
+            
+            // Add slide functionality if needed
+            if (gameState.canSlide) {
+                addSlideFunctionality();
+            }
+        }
 
-            // Create white keys
+        function createKeysInContainer(container) {
+            const baseOctave = gameState.currentNoteOctave;
             const WHITE_KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+            const octaveCount = gameState.canSlide ? 2 : 1;
+
+            for (let octaveOffset = 0; octaveOffset < octaveCount; octaveOffset++) {
+                const currentOctave = baseOctave + octaveOffset;
+                
+                WHITE_KEYS.forEach(note => {
+                    const key = document.createElement('div');
+                    key.className = 'key white-key';
+                    key.textContent = note;
+                    key.dataset.note = note;
+                    key.dataset.octave = currentOctave;
+                                    
+                    key.addEventListener('click', () => {
+                        playPianoKey(note, currentOctave);
+                        playPianoSound(note, currentOctave);
+                    });
+
+                    key.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        key.classList.add('pressed');
+                        playPianoKey(note, currentOctave);
+                        playPianoSound(note, currentOctave);
+                    });
+
+                    key.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        key.classList.remove('pressed');
+                    });
+                    
+                    container.appendChild(key);
+
+                    // Add black keys
+                    if (['C', 'D', 'F', 'G', 'A'].includes(note)) {
+                        const blackNote = note + '#';
+                        const blackKey = document.createElement('div');
+                        blackKey.className = 'key black-key';
+                        
+                        const enharmonics = getEnharmonicEquivalents(blackNote);
+                        if (enharmonics.length > 1) {
+                            blackKey.innerHTML = enharmonics.join('<br>');
+                        } else {
+                            blackKey.textContent = blackNote;
+                        }
+                        
+                        blackKey.dataset.note = blackNote;
+                        blackKey.dataset.octave = currentOctave;
+                        
+                        blackKey.addEventListener('click', () => {
+                            playPianoKey(blackNote, currentOctave);
+                            playPianoSound(blackNote, currentOctave);
+                        });
+                        
+                        blackKey.addEventListener('touchstart', (e) => {
+                            e.preventDefault();
+                            blackKey.classList.add('pressed');
+                            playPianoKey(blackNote, currentOctave);
+                            playPianoSound(blackNote, currentOctave);
+                        });
+
+                        blackKey.addEventListener('touchend', (e) => {
+                            e.preventDefault();
+                            blackKey.classList.remove('pressed');
+                        });
+                        
+                        container.appendChild(blackKey);
+                    } 
+                });
+            }
+        }
+
+        function createNormalPiano(pianoKeys) {
+            // EXACT ORIGINAL CODE - 1 octave, centered
+            const WHITE_KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+            const currentOctave = gameState.currentNoteOctave;
+            
             WHITE_KEYS.forEach(note => {
                 const key = document.createElement('div');
                 key.className = 'key white-key';
                 key.textContent = note;
                 key.dataset.note = note;
+                key.dataset.octave = currentOctave;
                                 
                 key.addEventListener('click', () => {
-                    playPianoKey(note);
-                    playPianoSound(note, gameState.currentNoteOctave);
+                    playPianoKey(note, currentOctave);
+                    playPianoSound(note, currentOctave);
                 });
 
-                // In createPianoKeys(), replace the touch event listeners:
                 key.addEventListener('touchstart', (e) => {
                     e.preventDefault();
                     key.classList.add('pressed');
-                    playPianoKey(note);
-                    playPianoSound(note, gameState.currentNoteOctave);
+                    playPianoKey(note, currentOctave);
+                    playPianoSound(note, currentOctave);
                 });
 
                 key.addEventListener('touchend', (e) => {
@@ -1858,17 +2033,18 @@
                     }
                     
                     blackKey.dataset.note = blackNote;
+                    blackKey.dataset.octave = currentOctave;
                     
                     blackKey.addEventListener('click', () => {
-                        playPianoKey(blackNote);
-                        playPianoSound(blackNote, gameState.currentNoteOctave);
+                        playPianoKey(blackNote, currentOctave);
+                        playPianoSound(blackNote, currentOctave);
                     });
-                                    // Do the same for black keys:
+                    
                     blackKey.addEventListener('touchstart', (e) => {
                         e.preventDefault();
                         blackKey.classList.add('pressed');
-                        playPianoKey(blackNote);
-                        playPianoSound(blackNote, gameState.currentNoteOctave);
+                        playPianoKey(blackNote, currentOctave);
+                        playPianoSound(blackNote, currentOctave);
                     });
 
                     blackKey.addEventListener('touchend', (e) => {
@@ -1880,6 +2056,139 @@
                 } 
             });
         }
+
+        function createSlidingPiano(pianoKeys) {
+            // Create inner container for sliding
+            const pianoKeysInner = document.createElement('div');
+            pianoKeysInner.className = 'piano-keys-inner';
+            pianoKeys.appendChild(pianoKeysInner);
+
+            // Create 2 octaves for sliding
+            const baseOctave = gameState.currentNoteOctave;
+            const WHITE_KEYS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+
+            for (let octaveOffset = 0; octaveOffset < 2; octaveOffset++) {
+                const currentOctave = baseOctave + octaveOffset;
+                
+                WHITE_KEYS.forEach(note => {
+                    const key = document.createElement('div');
+                    key.className = 'key white-key';
+                    key.textContent = note;
+                    key.dataset.note = note;
+                    key.dataset.octave = currentOctave;
+                                    
+                    key.addEventListener('click', () => {
+                        playPianoKey(note, currentOctave);
+                        playPianoSound(note, currentOctave);
+                    });
+
+                    key.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        key.classList.add('pressed');
+                        playPianoKey(note, currentOctave);
+                        playPianoSound(note, currentOctave);
+                    });
+
+                    key.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        key.classList.remove('pressed');
+                    });
+                    
+                    pianoKeysInner.appendChild(key);
+
+                    // Add black keys
+                    if (['C', 'D', 'F', 'G', 'A'].includes(note)) {
+                        const blackNote = note + '#';
+                        const blackKey = document.createElement('div');
+                        blackKey.className = 'key black-key';
+                        
+                        const enharmonics = getEnharmonicEquivalents(blackNote);
+                        if (enharmonics.length > 1) {
+                            blackKey.innerHTML = enharmonics.join('<br>');
+                        } else {
+                            blackKey.textContent = blackNote;
+                        }
+                        
+                        blackKey.dataset.note = blackNote;
+                        blackKey.dataset.octave = currentOctave;
+                        
+                        blackKey.addEventListener('click', () => {
+                            playPianoKey(blackNote, currentOctave);
+                            playPianoSound(blackNote, currentOctave);
+                        });
+                        
+                        blackKey.addEventListener('touchstart', (e) => {
+                            e.preventDefault();
+                            blackKey.classList.add('pressed');
+                            playPianoKey(blackNote, currentOctave);
+                            playPianoSound(blackNote, currentOctave);
+                        });
+
+                        blackKey.addEventListener('touchend', (e) => {
+                            e.preventDefault();
+                            blackKey.classList.remove('pressed');
+                        });
+                        
+                        pianoKeysInner.appendChild(blackKey);
+                    } 
+                });
+            }
+        }
+
+        function addSlideFunctionality() {
+            const keysContainer = document.querySelector('.piano-keys-container');
+            let startX = 0;
+            let currentTranslateX = 0;
+            const maxSlideDistance = keysContainer.offsetWidth * 0.5; // Half the 200% width
+            
+            keysContainer.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                gameState.isDragging = true;
+            });
+            
+            keysContainer.addEventListener('touchmove', (e) => {
+                if (!gameState.isDragging) return;
+                e.preventDefault();
+                
+                const currentX = e.touches[0].clientX;
+                const deltaX = currentX - startX;
+                
+                if (deltaX < 0) {
+                    currentTranslateX = Math.max(deltaX, -maxSlideDistance);
+                    keysContainer.style.transform = `translateX(${currentTranslateX}px)`;
+                }
+            });
+            
+            keysContainer.addEventListener('touchend', () => {
+                gameState.isDragging = false;
+            });
+
+            // Mouse events...
+            keysContainer.addEventListener('mousedown', (e) => {
+                startX = e.clientX;
+                gameState.isDragging = true;
+                e.preventDefault();
+            });
+            
+            keysContainer.addEventListener('mousemove', (e) => {
+                if (!gameState.isDragging) return;
+                e.preventDefault();
+                
+                const currentX = e.clientX;
+                const deltaX = currentX - startX;
+                
+                if (deltaX < 0) {
+                    currentTranslateX = Math.max(deltaX, -maxSlideDistance);
+                    keysContainer.style.transform = `translateX(${currentTranslateX}px)`;
+                }
+            });
+            
+            document.addEventListener('mouseup', () => {
+                gameState.isDragging = false;
+            });
+        }
+
+
 
         function setupEventListeners() {
             // Column 1: Note Types (mutually exclusive)
@@ -2370,6 +2679,13 @@
                 accidental: accidental,
                 area: selectedSection
             };
+
+            // Disable sliding for single notes
+            gameState.canSlide = false;
+            gameState.pianoSlideOffset = 0;
+
+            return noteData;
+
         }
 
 
@@ -3000,7 +3316,9 @@
 
             const noteData = gameState.chordMode ? generateChord() : 
                             (gameState.noteMode === 'scales' ? generateScaleNote() : generateNote());
-
+            
+            // Recreate piano if sliding capability changed
+            createPianoKeys();
             console.log('GENERATED DATA:', noteData);
             const movingNote = createNoteElement(noteData, false);
             movingNote.style.right = '-30px'; // Start outside the frame
@@ -3019,13 +3337,14 @@
             if (!gameState.activeNotes) gameState.activeNotes = [];
             gameState.activeNotes.push(movingNote);
             
+            const timeout = noteData.isChord ? 12000 : 8000;
             setTimeout(() => {
                 if (!movingNote.noteData.guessed) {
                     handleWrongAnswer();
                 }
                 movingNote.remove();
                 gameState.activeNotes = gameState.activeNotes.filter(n => n !== movingNote);
-            }, 8000);
+            }, timeout);
             
             const noteCount = DIFFICULTY_SETTINGS[gameState.difficulty].noteCount;
             const interval = 8000 / noteCount;
@@ -3042,7 +3361,7 @@
             gameState.stillNotes = [];
             gameState.currentStillNoteIndex = 0;
             
-            const noteCount = gameState.noteMode === 'scales' ? 7 : 8;
+            const noteCount = gameState.noteMode === 'scales' ? 7 : (gameState.chordMode ? 6 : 8);
             const containerWidth = container.offsetWidth || 300;
             const spacing = containerWidth / (noteCount + 1);
             
@@ -3182,7 +3501,7 @@
         }
 
 
-        function handleMovingNoteGuess(pressedNote) {
+        function handleMovingNoteGuess(pressedNote, pressedOctave = null) {
             if (!gameState.activeNotes || gameState.activeNotes.length === 0) return;
             
             let targetNote = null;
@@ -3194,6 +3513,59 @@
             }
             
             if (!targetNote) return;
+
+            // HANDLE CHORDS with octave checking
+            if (targetNote.noteData.isChord) {
+                targetNote.noteData.totalGuesses++;
+                
+                let foundMatch = false;
+                targetNote.noteData.notes.forEach((chordNote, index) => {
+                    const expectedNote = chordNote.note;
+                    const expectedOctave = chordNote.octave;
+                    const expectedNotes = getEnharmonicEquivalents(expectedNote);
+                    
+                    // Check both note and octave match
+                    const noteMatches = expectedNotes.includes(pressedNote);
+                    const octaveMatches = !pressedOctave || pressedOctave === expectedOctave;
+                    
+                    if (noteMatches && octaveMatches && !targetNote.noteData.correctNotes.has(expectedNote + expectedOctave)) {
+                        foundMatch = true;
+                        targetNote.noteData.correctNotes.add(expectedNote + expectedOctave);
+                        
+                        // Turn this specific note green
+                        const noteElements = targetNote.querySelectorAll('.chord-note');
+                        if (noteElements[index]) {
+                            noteElements[index].querySelector('.note-head').classList.add('correct');
+                        }
+                        
+                        handleCorrectAnswer();
+                    }
+                });
+                
+                if (!foundMatch) {
+                    handleWrongAnswer();
+                }
+                
+                // Check if all notes found or max guesses reached
+                if (targetNote.noteData.totalGuesses >= targetNote.noteData.maxGuesses || 
+                    targetNote.noteData.correctNotes.size === targetNote.noteData.notes.length) {
+                    
+                    // Mark remaining notes as orange
+                    targetNote.noteData.notes.forEach((chordNote, index) => {
+                        const noteKey = chordNote.note + chordNote.octave;
+                        if (!targetNote.noteData.correctNotes.has(noteKey)) {
+                            const noteElements = targetNote.querySelectorAll('.chord-note');
+                            if (noteElements[index]) {
+                                noteElements[index].querySelector('.note-head').classList.add('incorrect');
+                            }
+                        }
+                    });
+                    
+                    targetNote.noteData.guessed = true;
+                }
+                
+                return;
+            }
 
             gameState.currentNoteOctave = targetNote.noteData.octave || 4;
             
@@ -3278,29 +3650,29 @@
             }
         }
 
-        function handleStillNoteGuess(pressedNote) {
+        function handleStillNoteGuess(pressedNote, pressedOctave = null) {
             if (!gameState.stillNotes || gameState.currentStillNoteIndex >= gameState.stillNotes.length) return;
             
             const currentNote = gameState.stillNotes[gameState.currentStillNoteIndex];
             if (!currentNote || currentNote.noteData.guessed) return;
 
-            gameState.currentNoteOctave = currentNote.noteData.octave;
-
-
-            // HANDLE CHORDS - ADD THIS ENTIRE SECTION
+            // HANDLE CHORDS with octave checking
             if (currentNote.noteData.isChord) {
                 currentNote.noteData.totalGuesses++;
                 
-                // Check if pressed note matches any chord note
                 let foundMatch = false;
                 currentNote.noteData.notes.forEach((chordNote, index) => {
                     const expectedNote = chordNote.note;
+                    const expectedOctave = chordNote.octave;
                     const expectedNotes = getEnharmonicEquivalents(expectedNote);
                     
-                    if (expectedNotes.includes(pressedNote) && !currentNote.noteData.correctNotes.has(expectedNote)) {
-                        // Correct note found!
+                    // Check both note and octave match
+                    const noteMatches = expectedNotes.includes(pressedNote);
+                    const octaveMatches = !pressedOctave || pressedOctave === expectedOctave;
+                    
+                    if (noteMatches && octaveMatches && !currentNote.noteData.correctNotes.has(expectedNote + expectedOctave)) {
                         foundMatch = true;
-                        currentNote.noteData.correctNotes.add(expectedNote);
+                        currentNote.noteData.correctNotes.add(expectedNote + expectedOctave);
                         
                         // Turn this specific note green
                         const noteElements = currentNote.querySelectorAll('.chord-note');
@@ -3313,14 +3685,13 @@
                 });
                 
                 if (!foundMatch) {
-                    // Wrong note - just screen flicker, no red notes yet
                     handleWrongAnswer();
                 }
                 
-                // Check if all guesses used or all notes found
+                // Check completion and move to next
                 if (currentNote.noteData.totalGuesses >= currentNote.noteData.maxGuesses || 
                     currentNote.noteData.correctNotes.size === currentNote.noteData.notes.length) {
-                    
+
                     // Mark remaining notes as red and mark chord as guessed
                     currentNote.noteData.notes.forEach((chordNote, index) => {
                         if (!currentNote.noteData.correctNotes.has(chordNote.note)) {
@@ -3675,7 +4046,11 @@
                     bass: { correct: 0, total: 0 }
                 },
                 chordMode: currentChordMode,
-                currentChord: null
+                currentChord: null,
+                pianoSlideOffset: 0, // 0 = normal, 1 = slid one octave up
+                canSlide: false, // Only true when chord spans multiple octaves
+                isDragging: false,
+                dragStartX: 0
             };
 
             // Disable game configuration buttons during play
@@ -3788,6 +4163,20 @@
             }
             
             const selectedPosition = regionFilteredPositions[Math.floor(Math.random() * regionFilteredPositions.length)];
+
+            const chordData = {
+                chordName: randomChord,
+                notes: selectedPosition.notes,
+                clef: selectedPosition.clef,
+                isChord: true,
+                area: selectedPosition.clef
+            };
+
+            // Set sliding capability
+            gameState.canSlide = checkIfChordNeedsSliding(chordData);
+            gameState.currentNoteOctave = Math.min(...chordData.notes.map(n => n.octave));
+            gameState.pianoSlideOffset = 0;
+
             // Show chord name only (no mini staff)
             document.getElementById('currentScaleDisplay').textContent = `Chord: ${randomChord}`;
             document.getElementById('scaleInfoContainer').style.display = 'block';
@@ -3796,13 +4185,8 @@
             // Hide the mini staff for chords
             document.getElementById('miniStaffDisplay').style.display = 'none';
 
-            return {
-                chordName: randomChord,
-                notes: selectedPosition.notes,
-                clef: selectedPosition.clef,
-                isChord: true,
-                area: selectedPosition.clef
-            };
+            return chordData;
+                        
         }
 
         function isNoteInSelectedRegions(position) {
