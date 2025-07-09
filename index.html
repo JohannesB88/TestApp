@@ -908,9 +908,18 @@
                 <div class="scale-selector">
                     <div class="settings-row">
                         <div class="toggle-item">
-                            <span class="toggle-label-text still-label">Still</span>
+                            <span class="toggle-label-text notes-label">Notes</span>
                             <div class="toggle-switch">
-                                <input type="checkbox" id="gameModeToggle" class="toggle-input">
+                                <input type="checkbox" id="notesToggle" class="toggle-input" checked>
+                                <label for="notesToggle" class="toggle-slider-label">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="toggle-item">
+                            <span class="toggle-label-text move-label">Move</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="gameModeToggle" class="toggle-input" checked>
                                 <label for="gameModeToggle" class="toggle-slider-label">
                                     <span class="toggle-slider"></span>
                                 </label>
@@ -926,8 +935,17 @@
                         <div class="toggle-item">
                             <span class="toggle-label-text scales-label">Scales</span>
                             <div class="toggle-switch">
-                                <input type="checkbox" id="noteModeToggle" class="toggle-input">
-                                <label for="noteModeToggle" class="toggle-slider-label">
+                                <input type="checkbox" id="scalesToggle" class="toggle-input">
+                                <label for="scalesToggle" class="toggle-slider-label">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="toggle-item">
+                            <span class="toggle-label-text still-label">Still</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="stillToggle" class="toggle-input">
+                                <label for="stillToggle" class="toggle-slider-label">
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
@@ -942,11 +960,14 @@
                         <div class="toggle-item">
                             <span class="toggle-label-text chords-label">Chords</span>
                             <div class="toggle-switch">
-                                <input type="checkbox" id="chordsToggle" class="toggle-input" disabled>
+                                <input type="checkbox" id="chordsToggle" class="toggle-input">
                                 <label for="chordsToggle" class="toggle-slider-label">
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
+                        </div>
+                        <div class="toggle-item">
+                            <!-- Empty third row for column 2 -->
                         </div>
                         <div class="dropdown-item" id="keyDropdown">
                             <span class="dropdown-text">C Major</span>
@@ -1125,7 +1146,7 @@
     <script>
 
         // Game Configuration
-        const TARGET_SCORE = 80;
+        const TARGET_SCORE = 10;
 
         // Global sound state
         window.soundEnabled = true;
@@ -1178,6 +1199,100 @@
             'F2': 40,   'E2': 41,   'D2': 42,   'C2': 43,   'B1': 44,   'A1': 45,   'G1': 46,   'F1': 47,   'E1': 48
         };
 
+        // Create complete note dictionary
+        const ALL_POSSIBLE_NOTES = {};
+
+        // Populate it from existing NOTE_POSITIONS
+        Object.keys(NOTE_POSITIONS).forEach(key => {
+            const match = key.match(/([A-G][#b]?)(\d+)(_treble|_bass)?/);
+            if (match) {
+                const note = match[1];
+                const octave = parseInt(match[2]);
+                const hand = match[3] || '';
+                const position = NOTE_POSITIONS[key];
+                
+                ALL_POSSIBLE_NOTES[key] = {
+                    note: note,
+                    octave: octave,
+                    hand: hand,
+                    position: position,
+                    region: getRegionFromPosition(position)
+                };
+            }
+        });
+
+        function getRegionFromPosition(position) {
+            if (position <= 10) return 'above';
+            if (position >= 11 && position <= 19) return 'treble';
+            if (position >= 20 && position <= 30) return 'middle';
+            if (position >= 31 && position <= 39) return 'bass';
+            return 'below';
+        }
+
+        function buildChordFromRoot(chordNotes, rootKey, clef) {
+            const rootData = ALL_POSSIBLE_NOTES[rootKey];
+            const chordPositions = [];
+            let currentOctave = rootData.octave;
+            
+            for (let i = 0; i < chordNotes.length; i++) {
+                const targetNote = chordNotes[i];
+                const noteLetter = targetNote.replace('#', '').replace('b', '');
+                
+                // Handle octave increment for chord progression
+                if (i > 0) {
+                    const prevNote = chordNotes[i-1].replace('#', '').replace('b', '');
+                    const noteOrder = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+                    const prevIndex = noteOrder.indexOf(prevNote);
+                    const currentIndex = noteOrder.indexOf(noteLetter);
+                    
+                    if (currentIndex <= prevIndex) {
+                        currentOctave++;
+                    }
+                }
+                
+                // Find the note in this octave
+                const possibleKeys = [
+                    noteLetter + currentOctave,
+                    noteLetter + currentOctave + '_treble',
+                    noteLetter + currentOctave + '_bass'
+                ].filter(key => ALL_POSSIBLE_NOTES[key]);
+                
+                // Pick the best key for this clef with proper middle region limits
+                let bestKey = null;
+                for (let key of possibleKeys) {
+                    const noteData = ALL_POSSIBLE_NOTES[key];
+                    if (clef === 'treble') {
+                        // Treble: can go from position 2 to 25 (down to F3 in middle)
+                        if (noteData.position >= 2 && noteData.position <= 25) {
+                            bestKey = key;
+                            break;
+                        }
+                    } else if (clef === 'bass') {
+                        // Bass: can go from position 25 to 48 (up to G4 in middle) 
+                        if (noteData.position >= 25 && noteData.position <= 48) {
+                            bestKey = key;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!bestKey) return null; // Chord doesn't fit
+                
+                chordPositions.push({
+                    note: targetNote,
+                    octave: currentOctave,
+                    hand: ALL_POSSIBLE_NOTES[bestKey].hand,
+                    fullKey: bestKey,
+                    position: ALL_POSSIBLE_NOTES[bestKey].position
+                });
+            }
+            
+            return {
+                clef: clef,
+                notes: chordPositions
+            };
+        }
+
         // Get vertical position for note on staff
         function getNotePosition(note, octave, hand = '') {
             let noteKey = note + octave + hand;
@@ -1220,6 +1335,173 @@
             'Cm': ['C', 'D', 'Eb', 'F', 'G', 'Ab', 'Bb'],
             'Fm': ['F', 'G', 'Ab', 'Bb', 'C', 'Db', 'Eb']
         };
+
+        const CHORDS = {
+            // Major Triads
+            'C': ['C', 'E', 'G'],
+            'C#': ['C#', 'F', 'G#'],
+            'D': ['D', 'F#', 'A'],
+            'D#': ['D#', 'G', 'A#'],
+            'E': ['E', 'G#', 'B'],
+            'F': ['F', 'A', 'C'],
+            'F#': ['F#', 'A#', 'C#'],
+            'G': ['G', 'B', 'D'],
+            'G#': ['G#', 'C', 'D#'],
+            'A': ['A', 'C#', 'E'],
+            'A#': ['A#', 'D', 'F'],
+            'B': ['B', 'D#', 'F#'],
+            // Minor Triads
+            'Cm': ['C', 'D#', 'G'],
+            'C#m': ['C#', 'E', 'G#'],
+            'Dm': ['D', 'F', 'A'],
+            'D#m': ['D#', 'F#', 'A#'],
+            'Em': ['E', 'G', 'B'],
+            'Fm': ['F', 'G#', 'C'],
+            'F#m': ['F#', 'A', 'C#'],
+            'Gm': ['G', 'A#', 'D'],
+            'G#m': ['G#', 'B', 'D#'],
+            'Am': ['A', 'C', 'E'],
+            'A#m': ['A#', 'C#', 'F'],
+            'Bm': ['B', 'D', 'F#'],
+            // Diminished
+            'Cdim': ['C', 'D#', 'F#'],
+            'C#dim': ['C#', 'E', 'G'],
+            'Ddim': ['D', 'F', 'G#'],
+            'D#dim': ['D#', 'F#', 'A'],
+            'Edim': ['E', 'G', 'A#'],
+            'Fdim': ['F', 'G#', 'B'],
+            'F#dim': ['F#', 'A', 'C'],
+            'Gdim': ['G', 'A#', 'C#'],
+            'G#dim': ['G#', 'B', 'D'],
+            'Adim': ['A', 'C', 'D#'],
+            'A#dim': ['A#', 'C#', 'E'],
+            'Bdim': ['B', 'D', 'F'],
+            // Augmented
+            'Caug': ['C', 'E', 'G#'],
+            'C#aug': ['C#', 'F', 'A'],
+            'Daug': ['D', 'F#', 'A#'],
+            'D#aug': ['D#', 'G', 'B'],
+            'Eaug': ['E', 'G#', 'C'],
+            'Faug': ['F', 'A', 'C#'],
+            'F#aug': ['F#', 'A#', 'D'],
+            'Gaug': ['G', 'B', 'D#'],
+            'G#aug': ['G#', 'C', 'E'],
+            'Aaug': ['A', 'C#', 'F'],
+            'A#aug': ['A#', 'D', 'F#'],
+            'Baug': ['B', 'D#', 'G'],
+            // Dominant 7th
+            'C7': ['C', 'E', 'G', 'A#'],
+            'C#7': ['C#', 'F', 'G#', 'B'],
+            'D7': ['D', 'F#', 'A', 'C'],
+            'D#7': ['D#', 'G', 'A#', 'C#'],
+            'E7': ['E', 'G#', 'B', 'D'],
+            'F7': ['F', 'A', 'C', 'D#'],
+            'F#7': ['F#', 'A#', 'C#', 'E'],
+            'G7': ['G', 'B', 'D', 'F'],
+            'G#7': ['G#', 'C', 'D#', 'F#'],
+            'A7': ['A', 'C#', 'E', 'G'],
+            'A#7': ['A#', 'D', 'F', 'G#'],
+            'B7': ['B', 'D#', 'F#', 'A'],
+            // Minor 7th
+            'Cm7': ['C', 'D#', 'G', 'A#'],
+            'C#m7': ['C#', 'E', 'G#', 'B'],
+            'Dm7': ['D', 'F', 'A', 'C'],
+            'D#m7': ['D#', 'F#', 'A#', 'C#'],
+            'Em7': ['E', 'G', 'B', 'D'],
+            'Fm7': ['F', 'G#', 'C', 'D#'],
+            'F#m7': ['F#', 'A', 'C#', 'E'],
+            'Gm7': ['G', 'A#', 'D', 'F'],
+            'G#m7': ['G#', 'B', 'D#', 'F#'],
+            'Am7': ['A', 'C', 'E', 'G'],
+            'A#m7': ['A#', 'C#', 'F', 'G#'],
+            'Bm7': ['B', 'D', 'F#', 'A'],
+            // Suspended
+            'Csus2': ['C', 'D', 'G'],
+            'Csus4': ['C', 'F', 'G'],
+            'Dsus2': ['D', 'E', 'A'],
+            'Dsus4': ['D', 'G', 'A'],
+            'Esus2': ['E', 'F#', 'B'],
+            'Esus4': ['E', 'A', 'B'],
+            'Fsus2': ['F', 'G', 'C'],
+            'Fsus4': ['F', 'A#', 'C'],
+            // Add9
+            'Cadd9': ['C', 'E', 'G', 'D'],
+            'Dadd9': ['D', 'F#', 'A', 'E'],
+            'Eadd9': ['E', 'G#', 'B', 'F#'],
+            'Fadd9': ['F', 'A', 'C', 'G'],
+            'Gadd9': ['G', 'B', 'D', 'A'],
+            'Aadd9': ['A', 'C#', 'E', 'B'],
+            'Badd9': ['B', 'D#', 'F#', 'C#'],
+            // 6th
+            'C6': ['C', 'E', 'G', 'A'],
+            'Cm6': ['C', 'D#', 'G', 'A'],
+            'D6': ['D', 'F#', 'A', 'B'],
+            'Dm6': ['D', 'F', 'A', 'B'],
+            'E6': ['E', 'G#', 'B', 'C#'],
+            'Em6': ['E', 'G', 'B', 'C#'],
+            'F6': ['F', 'A', 'C', 'D'],
+            'Fm6': ['F', 'G#', 'C', 'D']
+            // Add more as needed
+        };
+
+        function findValidChordPositions(chordNotes) {
+            return findValidChordPositionsSimple(chordNotes);
+        }
+
+        function findValidChordPositionsSimple(chordNotes) {
+            const validPositions = [];
+            
+            // For each clef, try to build complete chords
+            ['treble', 'bass'].forEach(clef => {
+                // Get all possible starting notes for this chord's root
+                const rootNote = chordNotes[0].replace('#', '').replace('b', '');
+                
+                const possibleRoots = Object.keys(ALL_POSSIBLE_NOTES).filter(key => {
+                    const noteData = ALL_POSSIBLE_NOTES[key];
+                    const noteLetter = noteData.note.replace('#', '').replace('b', '');
+                    
+                    // Check if clef appropriate and region makes sense
+                    if (clef === 'treble') {
+                        return noteLetter === rootNote && noteData.position >= 2 && noteData.position <= 25;
+                    } else {
+                        return noteLetter === rootNote && noteData.position >= 25 && noteData.position <= 48;
+                    }
+                });
+                
+                // For each possible root, try to build the complete chord
+                possibleRoots.forEach(rootKey => {
+                    const chordPosition = buildChordFromRoot(chordNotes, rootKey, clef);
+                    if (chordPosition) {
+                        validPositions.push(chordPosition);
+                    }
+                });
+            });
+            
+            return validPositions;
+        }
+
+        function generateChord() {
+            const chordKeys = Object.keys(CHORDS);
+            const randomChord = chordKeys[Math.floor(Math.random() * chordKeys.length)];
+            const chordNotes = CHORDS[randomChord];
+            
+            const validPositions = findValidChordPositions(chordNotes);
+            if (validPositions.length === 0) {
+                console.log('No valid positions found for chord:', randomChord);
+                return generateNote(); // Fallback to single note
+            }
+            
+            const selectedPosition = validPositions[Math.floor(Math.random() * validPositions.length)];
+            
+            return {
+                chordName: randomChord,
+                notes: selectedPosition.notes,
+                clef: selectedPosition.clef,
+                isChord: true,
+                area: selectedPosition.clef
+            };
+        }
+
 
         // Scale definitions and accidental positions
         const SCALE_DEFINITIONS = {
@@ -1600,97 +1882,140 @@
         }
 
         function setupEventListeners() {
-            // Game mode toggle (Still)
-            // Game mode toggle (Still)
+            // Column 1: Note Types (mutually exclusive)
+            document.getElementById('notesToggle').addEventListener('change', function() {
+                if (gameState.isPlaying) {
+                    this.checked = !this.checked;
+                    return;
+                }
+                
+                if (this.checked) {
+                    // Turn off other note types
+                    document.getElementById('scalesToggle').checked = false;
+                    document.getElementById('chordsToggle').checked = false;
+                    
+                    // Update labels
+                    document.querySelector('.notes-label').style.color = '#333';
+                    document.querySelector('.scales-label').style.color = '#999';
+                    document.querySelector('.chords-label').style.color = '#999';
+                    
+                    // Set game state
+                    gameState.noteMode = 'random';
+                    gameState.chordMode = false;
+                    
+                    // Enable dropdowns
+                    document.getElementById('regionDropdown').style.opacity = '1';
+                    document.getElementById('regionDropdown').style.pointerEvents = 'auto';
+                    document.getElementById('keyDropdown').style.opacity = '1';
+                    document.getElementById('keyDropdown').style.pointerEvents = 'auto';
+                }
+            });
+
+            document.getElementById('scalesToggle').addEventListener('change', function() {
+                if (gameState.isPlaying) {
+                    this.checked = !this.checked;
+                    return;
+                }
+                
+                if (this.checked) {
+                    // Turn off other note types
+                    document.getElementById('notesToggle').checked = false;
+                    document.getElementById('chordsToggle').checked = false;
+                    
+                    // Update labels
+                    document.querySelector('.scales-label').style.color = '#333';
+                    document.querySelector('.notes-label').style.color = '#999';
+                    document.querySelector('.chords-label').style.color = '#999';
+                    
+                    // Set game state
+                    gameState.noteMode = 'scales';
+                    gameState.chordMode = false;
+                    
+                    // Disable dropdowns for scales
+                    document.getElementById('regionDropdown').style.opacity = '0.5';
+                    document.getElementById('regionDropdown').style.pointerEvents = 'none';
+                    document.getElementById('keyDropdown').style.opacity = '0.5';
+                    document.getElementById('keyDropdown').style.pointerEvents = 'none';
+                }
+            });
+
+            document.getElementById('chordsToggle').addEventListener('change', function() {
+                if (gameState.isPlaying) {
+                    this.checked = !this.checked;
+                    return;
+                }
+                
+                if (this.checked) {
+                    // Turn off other note types
+                    document.getElementById('notesToggle').checked = false;
+                    document.getElementById('scalesToggle').checked = false;
+                    
+                    // Update labels
+                    document.querySelector('.chords-label').style.color = '#333';
+                    document.querySelector('.notes-label').style.color = '#999';
+                    document.querySelector('.scales-label').style.color = '#999';
+                    
+                    // Set game state
+                    gameState.chordMode = true;
+                    gameState.noteMode = 'random';
+                    
+                    // Enable dropdowns for chords
+                    document.getElementById('regionDropdown').style.opacity = '1';
+                    document.getElementById('regionDropdown').style.pointerEvents = 'auto';
+                    document.getElementById('keyDropdown').style.opacity = '0.5';
+                    document.getElementById('keyDropdown').style.pointerEvents = 'none';
+                }
+            });
+
+            // Column 2: Game Modes (mutually exclusive)
             document.getElementById('gameModeToggle').addEventListener('change', function() {
                 if (gameState.isPlaying) {
                     this.checked = !this.checked;
                     return;
                 }
                 
-                gameState.gameMode = this.checked ? 'still' : 'moving';
-                
-                const difficultySelect = document.getElementById('difficultySelect');
                 if (this.checked) {
-                    difficultySelect.disabled = true;
-                    document.getElementById('difficulty').textContent = 'Still';
-                } else {
-                    difficultySelect.disabled = false;
-                    const currentDifficulty = difficultySelect.value;
-                    document.getElementById('difficulty').textContent = 
-                        currentDifficulty.charAt(0).toUpperCase() + currentDifficulty.slice(1);
+                    // Turn off still mode
+                    document.getElementById('stillToggle').checked = false;
+                    
+                    // Update labels
+                    document.querySelector('.move-label').style.color = '#333';
+                    document.querySelector('.still-label').style.color = '#999';
+                    
+                    // Set game state
+                    gameState.gameMode = 'moving';
+                    
+                    // Enable difficulty
+                    document.getElementById('levelDropdown').style.opacity = '1';
+                    document.getElementById('levelDropdown').style.pointerEvents = 'auto';
                 }
-
-                // Color change for Still label
-                const toggleItem = this.closest('.toggle-item');
-                const label = toggleItem.querySelector('.still-label');
-                if (this.checked) {
-                    label.style.color = '#333';
-                } else {
-                    label.style.color = '#999';;
-                }
-
-                // Mute/unmute Level dropdown when Still is toggled
-                const levelDropdown = document.getElementById('levelDropdown');
-                if (this.checked) {
-                    levelDropdown.style.opacity = '0.5';
-                    levelDropdown.style.pointerEvents = 'none';
-                } else {
-                    levelDropdown.style.opacity = '1';
-                    levelDropdown.style.pointerEvents = 'auto';
-                }
-
             });
 
-            // Note mode toggle (Scales)
-            // Note mode toggle (Scales)
-            document.getElementById('noteModeToggle').addEventListener('change', function() {
+            document.getElementById('stillToggle').addEventListener('change', function() {
                 if (gameState.isPlaying) {
                     this.checked = !this.checked;
                     return;
                 }
                 
-                gameState.noteMode = this.checked ? 'scales' : 'random';
-                
-                const regionSelect = document.getElementById('regionSelect');
-                const scaleSelect = document.getElementById('scale');
-                
                 if (this.checked) {
-                    regionSelect.disabled = true;
-                    scaleSelect.disabled = true;
-                    scaleSelect.value = 'C';
-                } else {
-                    regionSelect.disabled = false;
-                    scaleSelect.disabled = false;
+                    // Turn off move mode
+                    document.getElementById('gameModeToggle').checked = false;
+                    
+                    // Update labels
+                    document.querySelector('.still-label').style.color = '#333';
+                    document.querySelector('.move-label').style.color = '#999';
+                    
+                    // Set game state
+                    gameState.gameMode = 'still';
+                    
+                    // Disable difficulty for still mode
+                    document.getElementById('levelDropdown').style.opacity = '0.5';
+                    document.getElementById('levelDropdown').style.pointerEvents = 'none';
+                    document.getElementById('difficulty').textContent = 'Still';
                 }
-
-                // Color change for Scales label
-                const toggleItem = this.closest('.toggle-item');
-                const label = toggleItem.querySelector('.scales-label');
-                if (this.checked) {
-                    label.style.color = '#333';
-                } else {
-                    label.style.color = '#999';
-                }
-
-                // Mute/unmute Region and Key dropdowns when Scales is toggled
-                const regionDropdown = document.getElementById('regionDropdown');
-                const keyDropdown = document.getElementById('keyDropdown');
-                if (this.checked) {
-                    regionDropdown.style.opacity = '0.5';
-                    regionDropdown.style.pointerEvents = 'none';
-                    keyDropdown.style.opacity = '0.5';
-                    keyDropdown.style.pointerEvents = 'none';
-                } else {
-                    regionDropdown.style.opacity = '1';
-                    regionDropdown.style.pointerEvents = 'auto';
-                    keyDropdown.style.opacity = '1';
-                    keyDropdown.style.pointerEvents = 'auto';
-                }
-
             });
 
-            // Level dropdown
+            // Column 3: Dropdowns (same as before)
             document.getElementById('levelDropdown').addEventListener('click', function() {
                 if (gameState.isPlaying) return;
                 
@@ -1705,7 +2030,6 @@
                 });
             });
 
-            // Region dropdown
             document.getElementById('regionDropdown').addEventListener('click', function() {
                 if (gameState.isPlaying) return;
                 
@@ -1722,7 +2046,6 @@
                 });
             });
 
-            // Key dropdown
             document.getElementById('keyDropdown').addEventListener('click', function() {
                 if (gameState.isPlaying) return;
                 
@@ -1801,14 +2124,19 @@
             document.getElementById('gameStartOverlay').style.display = 'flex';
             document.getElementById('gameOver').style.display = 'none';
             document.getElementById('endGameBtn').style.display = 'none';
+            document.getElementById('notesToggle').disabled = false;
+            document.getElementById('scalesToggle').disabled = false;
+            document.getElementById('chordsToggle').disabled = false;
             document.getElementById('gameModeToggle').disabled = false;
+            document.getElementById('stillToggle').disabled = false;
             document.getElementById('regionSelect').disabled = false;
-            document.getElementById('noteModeToggle').disabled = false;
+            //document.getElementById('noteModeToggle').disabled = false;
             document.getElementById('currentScaleDisplay').style.display = 'none';
             document.getElementById('scaleInfoContainer').style.display = 'none';
             document.getElementById('scaleInfoContainer').style.display = 'none';
             // Clear any old scale info
             document.getElementById('currentScaleDisplay').textContent = '';
+            document.getElementById('scaleInfoContainer').style.display = 'none';
             // Clear old accidentals
             const trebleStaff = document.getElementById('miniTrebleStaff');
             const bassStaff = document.getElementById('miniBassStaff');
@@ -1843,7 +2171,11 @@
             // Re-enable game configuration buttons
             document.getElementById('scale').disabled = false;
             document.getElementById('difficultySelect').disabled = false;
+            document.getElementById('notesToggle').disabled = false;
+            document.getElementById('scalesToggle').disabled = false;
+            document.getElementById('chordsToggle').disabled = false;
             document.getElementById('gameModeToggle').disabled = false;
+            document.getElementById('stillToggle').disabled = false;
             document.getElementById('regionSelect').disabled = false; // ADD THIS LINE
 
         }
@@ -1870,13 +2202,20 @@
             gameState.stillNotes = [];
             
             // Hide end game button
+            document.getElementById('notesToggle').disabled = false;
+            document.getElementById('scalesToggle').disabled = false;
+            document.getElementById('chordsToggle').disabled = false;
             document.getElementById('gameModeToggle').disabled = false;
-            document.getElementById('noteModeToggle').disabled = false;
+            document.getElementById('stillToggle').disabled = false;
 
             // Re-enable game configuration buttons
             document.getElementById('scale').disabled = false;
             document.getElementById('difficultySelect').disabled = false;
+            document.getElementById('notesToggle').disabled = false;
+            document.getElementById('scalesToggle').disabled = false;
+            document.getElementById('chordsToggle').disabled = false;
             document.getElementById('gameModeToggle').disabled = false;
+            document.getElementById('stillToggle').disabled = false;
 
             // Hide end game button
             document.getElementById('endGameBtn').style.display = 'none';
@@ -2232,6 +2571,11 @@
         }
 
         function createNoteElement(noteData, isStill = false) {
+            if (noteData.isChord) {
+                return createChordElement(noteData, isStill);
+            }
+            
+            // Existing single note code remains the same...
             const noteElement = document.createElement('div');
             noteElement.className = isStill ? 'still-note' : 'moving-note';
             
@@ -2313,6 +2657,240 @@
             }
             
             return noteElement;
+        }
+
+        function createChordElement(chordData, isStill = false) {
+            const chordContainer = document.createElement('div');
+            chordContainer.className = isStill ? 'still-note chord-container' : 'moving-note chord-container';
+            
+            // Position container at the average position of all notes
+            const avgPosition = chordData.notes.reduce((sum, note) => sum + NOTE_POSITIONS[note.fullKey], 0) / chordData.notes.length;
+            chordContainer.style.top = `calc(${avgPosition - 1} * (100% / 48))`;
+            chordContainer.style.transform = 'translateY(-50%)';
+            
+            // FIRST: Calculate stem direction
+            const staffMiddle = chordData.clef === 'treble' ? 14 : 34;
+            let furthestDistance = 0;
+            let furthestPosition = 0;
+            
+            chordData.notes.forEach(noteInfo => {
+                const position = NOTE_POSITIONS[noteInfo.fullKey];
+                const distance = Math.abs(position - staffMiddle);
+                if (distance > furthestDistance) {
+                    furthestDistance = distance;
+                    furthestPosition = position;
+                }
+            });
+            
+            // THEN: Create each note with ledger lines
+            chordData.notes.forEach((noteInfo, index) => {
+                const noteElement = document.createElement('div');
+                noteElement.className = 'chord-note';
+                noteElement.style.position = 'absolute';
+                noteElement.style.width = '18px';
+                noteElement.style.height = '14px';
+                
+                // Create note head
+                const noteHead = document.createElement('div');
+                noteHead.className = 'note-head';
+                noteElement.appendChild(noteHead);
+
+                // ADD ACCIDENTALS for chord notes
+                const chordNote = chordData.notes.find(n => n.fullKey === noteInfo.fullKey);
+                if (chordNote && chordNote.note.includes('#')) {
+                    const accidentalElement = document.createElement('div');
+                    accidentalElement.style.position = 'absolute';
+                    accidentalElement.style.right = '20px';
+                    accidentalElement.style.top = '50%';
+                    accidentalElement.style.transform = 'translateY(-50%)';
+                    accidentalElement.style.fontSize = '16px';
+                    accidentalElement.style.color = 'black';
+                    accidentalElement.style.zIndex = '11';
+                    accidentalElement.style.fontWeight = 'bold';
+                    accidentalElement.textContent = '♯';
+                    noteElement.appendChild(accidentalElement);
+                } else if (chordNote && chordNote.note.includes('b')) {
+                    // Similar for flats
+                    const accidentalElement = document.createElement('div');
+                    accidentalElement.style.position = 'absolute';
+                    accidentalElement.style.right = '20px';
+                    accidentalElement.style.top = 'calc(50% - 3px)';
+                    accidentalElement.style.transform = 'translateY(-50%)';
+                    accidentalElement.style.fontSize = '16px';
+                    accidentalElement.style.color = 'black';
+                    accidentalElement.style.zIndex = '11';
+                    accidentalElement.style.fontWeight = 'bold';
+                    accidentalElement.textContent = '♭';
+                    noteElement.appendChild(accidentalElement);
+                }
+
+                
+                // Position relative to container
+                const relativePosition = NOTE_POSITIONS[noteInfo.fullKey] - avgPosition;
+                const staffHeight = 280;
+                const pixelsPerPosition = staffHeight / 48;
+                noteElement.style.top = (relativePosition * pixelsPerPosition) + 'px';
+                
+                // ADD HORIZONTAL OFFSET FOR ADJACENT NOTES
+                let horizontalOffset = 0;
+                if (index > 0) {
+                    const currentPos = NOTE_POSITIONS[noteInfo.fullKey];
+                    const prevPos = NOTE_POSITIONS[chordData.notes[index - 1].fullKey];
+                    
+                    // If notes are adjacent (1 position apart), offset them
+                    if (Math.abs(currentPos - prevPos) === 1) {
+                        // Don't shift the top note (first) or bottom note (last)
+                        const isTopNote = (index === 0);
+                        const isBottomNote = (index === chordData.notes.length - 1);
+                        
+                        if (!isTopNote && !isBottomNote) {
+                            // Determine stem direction (calculate it same way as main stem)
+                            // We need to know the final stemDirection here
+                            let chordStemDirection = 'up'; // default
+                            
+                            // Copy the same logic used for main stem direction
+                            if (avgPosition >= 11 && avgPosition <= 19) {
+                                // Treble logic
+                                const notePositions = chordData.notes.map(note => NOTE_POSITIONS[note.fullKey]);
+                                const trebleCenterLine = 14;
+                                const notesAboveCenter = notePositions.filter(pos => pos < trebleCenterLine).length;
+                                const notesBelowCenter = notePositions.filter(pos => pos > trebleCenterLine).length;
+                                chordStemDirection = (notesAboveCenter > notesBelowCenter) ? 'up' : 'down';
+                            } else if (avgPosition >= 31 && avgPosition <= 39) {
+                                // Bass logic  
+                                const notePositions = chordData.notes.map(note => NOTE_POSITIONS[note.fullKey]);
+                                const bassCenterLine = 34;
+                                const notesAboveCenter = notePositions.filter(pos => pos < bassCenterLine).length;
+                                const notesBelowCenter = notePositions.filter(pos => pos > bassCenterLine).length;
+                                chordStemDirection = (notesAboveCenter > notesBelowCenter) ? 'up' : 'down';
+                            } else if (avgPosition >= 18 && avgPosition <= 32) {
+                                // Middle region
+                                chordStemDirection = (chordData.clef === 'treble') ? 'down' : 'up';
+                            } else if (avgPosition <= 10) {
+                                chordStemDirection = 'up';
+                            } else {
+                                chordStemDirection = 'down';
+                            }
+                            
+                            // Apply offset based on stem direction
+                            if (chordStemDirection === 'down') {
+                                horizontalOffset = -12; // Left side (opposite of stem)
+                            } else {
+                                horizontalOffset = 12;  // Right side (opposite of stem)
+                            }
+                        }
+                    }
+                }
+
+                noteElement.style.left = horizontalOffset + 'px';
+
+                // Add ledger lines if needed (now furthestPosition is available)
+                const ledgerInfo = needsLedgerLines(NOTE_POSITIONS[noteInfo.fullKey]);
+                if (ledgerInfo) {
+                    const tempStem = document.createElement('div');
+                    tempStem.className = 'note-stem';
+                    if (furthestPosition < staffMiddle) {
+                        tempStem.classList.add('stem-down');
+                    } else {
+                        tempStem.classList.add('stem-up');
+                    }
+                    noteElement.appendChild(tempStem);
+                    addLedgerLines(noteElement, ledgerInfo);
+                    noteElement.removeChild(tempStem);
+                }
+                
+                chordContainer.appendChild(noteElement);
+            });
+            
+            // Add the single stem for the entire chord
+            // Add the single stem for the entire chord
+            const stem = document.createElement('div');
+            stem.className = 'note-stem';
+
+            // Define center lines
+            const trebleCenterLine = 14; // G line in treble clef
+            const bassCenterLine = 34;   // D line in bass clef
+
+            // Find the highest and lowest note positions
+            const notePositions = chordData.notes.map(note => NOTE_POSITIONS[note.fullKey]);
+            const highestPos = Math.min(...notePositions); // Lower number = higher on staff
+            const lowestPos = Math.max(...notePositions);  // Higher number = lower on staff
+
+            const staffHeight = 280;
+            const pixelsPerPosition = staffHeight / 48;
+
+            let stemDirection = 'up'; // default
+
+            // Determine which region and stem direction
+            if (avgPosition >= 11 && avgPosition <= 19) {
+                // Treble clef region
+                const notesAboveCenter = notePositions.filter(pos => pos < trebleCenterLine).length;
+                const notesBelowCenter = notePositions.filter(pos => pos > trebleCenterLine).length;
+                
+                if (notesAboveCenter > notesBelowCenter) {
+                    stemDirection = 'up'; // Majority above center
+                } else {
+                    stemDirection = 'down';   // Majority below center
+                }
+            } else if (avgPosition >= 31 && avgPosition <= 39) {
+                // Bass clef region
+                const notesAboveCenter = notePositions.filter(pos => pos < bassCenterLine).length;
+                const notesBelowCenter = notePositions.filter(pos => pos > bassCenterLine).length;
+                
+                if (notesAboveCenter > notesBelowCenter) {
+                    stemDirection = 'up'; // Majority above center
+                } else {
+                    stemDirection = 'down';   // Majority below center
+                }
+            } else if (avgPosition >= 16 && avgPosition <= 34) {
+                // Middle region - stem direction based on clef
+                if (chordData.clef === 'treble') {
+                    stemDirection = 'down'; // Treble in middle: stem from above (down)
+                } else {
+                    stemDirection = 'up';   // Bass in middle: stem from below (up)
+                }
+            
+            
+            } else if (avgPosition <= 10) {
+                // Above treble staff
+                stemDirection = 'up';
+            } else if (avgPosition >= 30) {
+                // Below bass staff
+                stemDirection = 'down';
+            }
+            console.log('Final stem decision - clef:', chordData.clef, 'stemDirection:', stemDirection, 'avgPosition:', avgPosition);
+            // Apply stem direction
+            if (stemDirection === 'down') {
+                stem.classList.add('stem-down');
+                const highestNoteOffset = (highestPos - avgPosition) * pixelsPerPosition;
+                stem.style.top = (highestNoteOffset - 25) + 'px'; // Start from highest note
+                stem.style.left = '1px';  // LEFT side for stem down
+                stem.style.height = Math.max(35, (lowestPos - highestPos) * pixelsPerPosition + 35) + 'px';
+            } else {
+                stem.classList.add('stem-up');
+                const lowestNoteOffset = (lowestPos - avgPosition) * pixelsPerPosition;
+                const highestNoteOffset = (highestPos - avgPosition) * pixelsPerPosition;
+                
+                stem.style.top = (highestNoteOffset + 3) + 'px'; // Start below lowest note
+                stem.style.right = '2px';
+                stem.style.height = (lowestNoteOffset - highestNoteOffset + 35) + 'px'; // Full span + extension
+            }
+
+            chordContainer.appendChild(stem);
+            
+            // Store chord data
+            chordContainer.noteData = {
+                isChord: true,
+                chordName: chordData.chordName,
+                notes: chordData.notes,
+                area: chordData.area,
+                guessed: false,
+                correctNotes: new Set(),  // Track which notes have been guessed correctly
+                totalGuesses: 0,          // Track total guesses made
+                maxGuesses: chordData.notes.length  // Maximum allowed guesses
+            };
+                        
+            return chordContainer;
         }
 
         function needsLedgerLines(notePosition) {
@@ -2417,10 +2995,20 @@
         function showNote() {
             if (!gameState.isPlaying || gameState.gameMode !== 'moving') return;
 
-            const noteData = gameState.noteMode === 'scales' ? generateScaleNote() : generateNote();
+            // Find the showNote() function and add this debug right before the noteData generation:
+            console.log('ABOUT TO GENERATE NOTE - chordMode:', gameState.chordMode);
+
+            const noteData = gameState.chordMode ? generateChord() : 
+                            (gameState.noteMode === 'scales' ? generateScaleNote() : generateNote());
+
+            console.log('GENERATED DATA:', noteData);
             const movingNote = createNoteElement(noteData, false);
             movingNote.style.right = '-30px'; // Start outside the frame
-            movingNote.style.animationDuration = '8000ms';
+            if (noteData.isChord) {
+                movingNote.style.animationDuration = '12000ms'; // Slower animation for chords
+            } else {
+                movingNote.style.animationDuration = '8000ms';  // Normal speed for single notes
+            }
 
             document.querySelector('.staff-area').appendChild(movingNote);
 
@@ -2459,7 +3047,8 @@
             const spacing = containerWidth / (noteCount + 1);
             
             for (let i = 0; i < noteCount; i++) {
-                const noteData = gameState.noteMode === 'scales' ? generateScaleNote() : generateNote();
+                const noteData = gameState.chordMode ? generateChord() : 
+                    (gameState.noteMode === 'scales' ? generateScaleNote() : generateNote());
                 const stillNote = createNoteElement(noteData, true);
                 stillNote.style.left = `${spacing * (i + 1) - 9}px`; // Center the note
                 stillNote.style.position = 'absolute';
@@ -2471,11 +3060,23 @@
                 gameState.stillNotes.push(stillNote);
             }
             
-            // Highlight first note
+            // Highlight first note/chord
+            // Highlight first note (only if it's a single note, not a chord)
             if (gameState.stillNotes.length > 0) {
-                gameState.stillNotes[0].style.border = '2px solid blue';
-                gameState.stillNotes[0].style.borderRadius = '50%';
+                const firstElement = gameState.stillNotes[0];
+                if (firstElement.noteData.isChord) {
+                    // Make first chord stem blue
+                    const chordStem = firstElement.querySelector('.note-stem');
+                    if (chordStem) {
+                        chordStem.style.backgroundColor = 'blue';
+                    }
+                } else {
+                    firstElement.style.border = '2px solid blue';
+                    firstElement.style.borderRadius = '50%';
+                }
             }
+
+
         }
 
         function getScaleNote(baseLetter, selectedScale) {
@@ -2594,9 +3195,61 @@
             
             if (!targetNote) return;
 
-            gameState.currentNoteOctave = targetNote.noteData.octave;
+            gameState.currentNoteOctave = targetNote.noteData.octave || 4;
             
+            // HANDLE CHORDS
+            if (targetNote.noteData.isChord) {
+                targetNote.noteData.totalGuesses++;
+                
+                // Check if pressed note matches any chord note
+                let foundMatch = false;
+                targetNote.noteData.notes.forEach((chordNote, index) => {
+                    const expectedNote = chordNote.note;
+                    const expectedNotes = getEnharmonicEquivalents(expectedNote);
+                    
+                    if (expectedNotes.includes(pressedNote) && !targetNote.noteData.correctNotes.has(expectedNote)) {
+                        // Correct note found!
+                        foundMatch = true;
+                        targetNote.noteData.correctNotes.add(expectedNote);
+                        
+                        // Turn this specific note green
+                        const noteElements = targetNote.querySelectorAll('.chord-note');
+                        if (noteElements[index]) {
+                            noteElements[index].querySelector('.note-head').classList.add('correct');
+                        }
+                        
+                        handleCorrectAnswer();
+                    }
+                });
+                
+                if (!foundMatch) {
+                    // Wrong note - just screen flicker, no red notes yet
+                    handleWrongAnswer();
+                }
+                
+                // Check if all guesses used or all notes found
+                if (targetNote.noteData.totalGuesses >= targetNote.noteData.maxGuesses || 
+                    targetNote.noteData.correctNotes.size === targetNote.noteData.notes.length) {
+                    
+                    // Mark remaining notes as red and mark chord as guessed
+                    targetNote.noteData.notes.forEach((chordNote, index) => {
+                        if (!targetNote.noteData.correctNotes.has(chordNote.note)) {
+                            const noteElements = targetNote.querySelectorAll('.chord-note');
+                            if (noteElements[index]) {
+                                noteElements[index].querySelector('.note-head').classList.add('incorrect');
+                            }
+                        }
+                    });
+                    
+                    targetNote.noteData.guessed = true;
+                }
+                
+                return;
+            }
+            
+            // HANDLE SINGLE NOTES (existing logic)
             let expectedNote = targetNote.noteData.note;
+        
             if (targetNote.noteData.accidental) {
                 switch (targetNote.noteData.accidental) {
                     case 'sharp': expectedNote += '#'; break;
@@ -2632,6 +3285,94 @@
             if (!currentNote || currentNote.noteData.guessed) return;
 
             gameState.currentNoteOctave = currentNote.noteData.octave;
+
+
+            // HANDLE CHORDS - ADD THIS ENTIRE SECTION
+            if (currentNote.noteData.isChord) {
+                currentNote.noteData.totalGuesses++;
+                
+                // Check if pressed note matches any chord note
+                let foundMatch = false;
+                currentNote.noteData.notes.forEach((chordNote, index) => {
+                    const expectedNote = chordNote.note;
+                    const expectedNotes = getEnharmonicEquivalents(expectedNote);
+                    
+                    if (expectedNotes.includes(pressedNote) && !currentNote.noteData.correctNotes.has(expectedNote)) {
+                        // Correct note found!
+                        foundMatch = true;
+                        currentNote.noteData.correctNotes.add(expectedNote);
+                        
+                        // Turn this specific note green
+                        const noteElements = currentNote.querySelectorAll('.chord-note');
+                        if (noteElements[index]) {
+                            noteElements[index].querySelector('.note-head').classList.add('correct');
+                        }
+                        
+                        handleCorrectAnswer();
+                    }
+                });
+                
+                if (!foundMatch) {
+                    // Wrong note - just screen flicker, no red notes yet
+                    handleWrongAnswer();
+                }
+                
+                // Check if all guesses used or all notes found
+                if (currentNote.noteData.totalGuesses >= currentNote.noteData.maxGuesses || 
+                    currentNote.noteData.correctNotes.size === currentNote.noteData.notes.length) {
+                    
+                    // Mark remaining notes as red and mark chord as guessed
+                    currentNote.noteData.notes.forEach((chordNote, index) => {
+                        if (!currentNote.noteData.correctNotes.has(chordNote.note)) {
+                            const noteElements = currentNote.querySelectorAll('.chord-note');
+                            if (noteElements[index]) {
+                                noteElements[index].querySelector('.note-head').classList.add('incorrect');
+                            }
+                        }
+                    });
+                    
+                    currentNote.noteData.guessed = true;
+
+                    // ADD THIS - Reset stem color when leaving chord
+                    if (currentNote.noteData.isChord) {
+                        const chordStem = currentNote.querySelector('.note-stem');
+                        if (chordStem) {
+                            chordStem.style.backgroundColor = ''; // Reset to default
+                        }
+                    }
+                    
+                    // Move to next chord/note
+                    gameState.currentStillNoteIndex++;
+                    if (gameState.currentStillNoteIndex < gameState.stillNotes.length) {
+                        const nextElement = gameState.stillNotes[gameState.currentStillNoteIndex];
+                        
+                        // Update chord display if next element is a chord
+                        if (nextElement.noteData.isChord) {
+                            document.getElementById('currentScaleDisplay').textContent = `Chord: ${nextElement.noteData.chordName}`;
+                            document.getElementById('miniStaffDisplay').style.display = 'none';
+                            
+                            // ADD THIS - Make chord stem blue
+                            const chordStem = nextElement.querySelector('.note-stem');
+                            if (chordStem) {
+                                chordStem.style.backgroundColor = 'blue';
+                            }
+                        }
+                        
+                        if (!nextElement.noteData.isChord) {
+                            nextElement.style.border = '2px solid blue';
+                            nextElement.style.borderRadius = '50%';
+                        }
+                    } else {
+                        setTimeout(() => {
+                            if (gameState.isPlaying) createStillNotes();
+                        }, 1000);
+                    }
+                }
+                
+                return; // Exit here for chords
+            }
+            // END CHORD HANDLING
+
             
             let expectedNote = currentNote.noteData.note;
             if (currentNote.noteData.accidental) {
@@ -2652,11 +3393,14 @@
                 handleCorrectAnswer();
                 
                 // Move to next note
-                gameState.currentStillNoteIndex++;
                 if (gameState.currentStillNoteIndex < gameState.stillNotes.length) {
-                    const nextNote = gameState.stillNotes[gameState.currentStillNoteIndex];
-                    nextNote.style.border = '2px solid blue';
-                    nextNote.style.borderRadius = '50%';
+                    const nextElement = gameState.stillNotes[gameState.currentStillNoteIndex];
+                    if (!nextElement.noteData.isChord) {
+                        // Only add blue circle for single notes
+                        nextElement.style.border = '2px solid blue';
+                        nextElement.style.borderRadius = '50%';
+                    }
+                    // If it's a chord, do nothing (no blue circle)
                 } else {
                     // All notes completed, create new set
                     setTimeout(() => {
@@ -2674,9 +3418,13 @@
                     // Move to next note even after wrong answer
                     gameState.currentStillNoteIndex++;
                     if (gameState.currentStillNoteIndex < gameState.stillNotes.length) {
-                        const nextNote = gameState.stillNotes[gameState.currentStillNoteIndex];
-                        nextNote.style.border = '2px solid blue';
-                        nextNote.style.borderRadius = '50%';
+                        const nextElement = gameState.stillNotes[gameState.currentStillNoteIndex];
+                        if (!nextElement.noteData.isChord) {
+                            // Only add blue circle for single notes
+                            nextElement.style.border = '2px solid blue';
+                            nextElement.style.borderRadius = '50%';
+                        }
+                        // If it's a chord, do nothing (no blue circle)
                     } else {
                         // All notes completed, create new set
                         setTimeout(() => {
@@ -2884,11 +3632,15 @@
                 });
             }
             document.getElementById('endGameBtn').style.display = 'inline-block';
+            document.getElementById('notesToggle').disabled = true;
+            document.getElementById('scalesToggle').disabled = true;
+            document.getElementById('chordsToggle').disabled = true;
             document.getElementById('gameModeToggle').disabled = true;
-            document.getElementById('noteModeToggle').disabled = true;
+            document.getElementById('stillToggle').disabled = true;
 
             // Store the current selectedRegions before resetting
             const currentSelectedRegions = gameState.selectedRegions || ['above', 'treble', 'middle', 'bass', 'below'];
+            const currentChordMode = gameState.chordMode || false;  // ADD THIS LINE
 
             gameState = {
                 score: 0,
@@ -2921,7 +3673,9 @@
                     between: { correct: 0, total: 0 },
                     treble: { correct: 0, total: 0 },
                     bass: { correct: 0, total: 0 }
-                }
+                },
+                chordMode: currentChordMode,
+                currentChord: null
             };
 
             // Disable game configuration buttons during play
@@ -2996,6 +3750,71 @@
             const displayName = scaleNames[gameState.selectedScale] || gameState.selectedScale;
             document.getElementById('scaleDisplay').textContent = `Scale: ${displayName}`;
         }
+
+        function generateChord() {
+            const chordKeys = Object.keys(CHORDS);
+            const randomChord = chordKeys[Math.floor(Math.random() * chordKeys.length)];
+            const chordNotes = CHORDS[randomChord];
+            
+            
+            console.log('Trying to generate chord:', randomChord, 'with notes:', chordNotes);
+            
+            const validPositions = findValidChordPositions(chordNotes);
+            console.log('Valid positions found:', validPositions.length);
+            
+            if (validPositions.length === 0) {
+                console.log('No valid positions found for chord:', randomChord, 'falling back to single note');
+                return generateNote();
+            }
+            
+            const regionFilteredPositions = validPositions.filter(position => {
+                console.log('Checking position for chord:', randomChord);
+                console.log('Selected regions:', gameState.selectedRegions);
+                
+                const notesInRegion = position.notes.filter(noteInfo => {
+                    const notePosition = NOTE_POSITIONS[noteInfo.fullKey];
+                    const inRegion = isNoteInSelectedRegions(notePosition);
+                    console.log(`Note ${noteInfo.note}${noteInfo.octave} at position ${notePosition} - in region: ${inRegion}`);
+                    return inRegion;
+                });
+                
+                console.log('Notes in selected regions:', notesInRegion.length, 'out of', position.notes.length);
+                return notesInRegion.length > 0;
+            });
+                        
+            if (regionFilteredPositions.length === 0) {
+                console.log('No chord positions match selected regions');
+                return generateNote(); // Fallback
+            }
+            
+            const selectedPosition = regionFilteredPositions[Math.floor(Math.random() * regionFilteredPositions.length)];
+            // Show chord name only (no mini staff)
+            document.getElementById('currentScaleDisplay').textContent = `Chord: ${randomChord}`;
+            document.getElementById('scaleInfoContainer').style.display = 'block';
+            document.getElementById('currentScaleDisplay').style.display = 'block';
+
+            // Hide the mini staff for chords
+            document.getElementById('miniStaffDisplay').style.display = 'none';
+
+            return {
+                chordName: randomChord,
+                notes: selectedPosition.notes,
+                clef: selectedPosition.clef,
+                isChord: true,
+                area: selectedPosition.clef
+            };
+        }
+
+        function isNoteInSelectedRegions(position) {
+            const allowedSections = gameState.selectedRegions;
+            
+            return (allowedSections.includes('above') && position <= 10) ||
+                (allowedSections.includes('treble') && position >= 11 && position <= 19) ||
+                (allowedSections.includes('middle') && position >= 20 && position <= 30) ||
+                (allowedSections.includes('bass') && position >= 31 && position <= 39) ||
+                (allowedSections.includes('below') && position >= 40);
+        }
+
 
         function showWrongNote(pressedNote, correctNote) {
             document.getElementById('scaleDisplay').style.display = 'none';
